@@ -17,7 +17,7 @@
 // @name:zh-CN         insta-controls
 // @name:zh-TW         insta-controls
 // @namespace          https://github.com/dev-ainz/insta-controls/
-// @version            v1.3.7
+// @version            v1.3.8
 // @description        Download photos and videos from Instagram posts in one click, including Stories, Reels, and profile pictures.
 // @description:ar     نزّل صورًا ومقاطع فيديو من منشورات Instagram بنقرة واحدة، بما في ذلك القصص وReels وصور الملف الشخصي.
 // @description:de     Lade Fotos und Videos aus Instagram-Beiträgen mit einem Klick herunter, einschließlich Stories, Reels und Profilbildern.
@@ -94,6 +94,7 @@
     AUTO_RENAME: true,
     CAPTURE_IMAGE_VIA_MEDIA_CACHE: false,
     CHECK_FOR_UPDATE: false,
+    CONTINUE_FEED_VIDEO_PLAYBACK: true,
     DIRECT_DOWNLOAD_ALL: true,
     DIRECT_DOWNLOAD_STORY: true,
     DIRECT_DOWNLOAD_VISIBLE_RESOURCE: true,
@@ -139,6 +140,12 @@
   const NATIVE_AUDIO_ENFORCEMENT_WINDOW = 3000;
   const NATIVE_AUDIO_ENFORCEMENT_LIMIT = 8;
   const NATIVE_AUDIO_PREFERENCE_KEY = "G_NATIVE_VIDEO_AUDIO";
+  // Time allowed between the click that opens a post and its player loading.
+  const FEED_VIDEO_HANDOFF_WINDOW = 5000;
+  // Renditions of one video can report slightly different durations.
+  const FEED_VIDEO_DURATION_TOLERANCE = 1;
+  // Instagram's autoplay settles within this time after a player changes.
+  const FEED_VIDEO_HANDOFF_GUARD = 2000;
   const NATIVE_CONTROLS_EXCLUDED_SELECTOR =
     ".button_wrapper, .IG_REELS_CONTROLS, .volume_slider, .IG_POPUP_DIG, #imageViewer";
   const NATIVE_CONTROLS_INTERACTIVE_SELECTOR =
@@ -1511,6 +1518,12 @@
       scanQueued: false,
       videoState: new WeakMap(),
     },
+    GL_feedHandoff: {
+      checkQueued: false,
+      link: null,
+      pending: null,
+      userInputAt: -Infinity,
+    },
     GL_weakCache: {
       overlay: new WeakMap(),
       mutedButton: new WeakMap(),
@@ -1550,6 +1563,7 @@
   GM_addStyle(injectedButtonStyle);
   initHTML5VideoControls();
   initMaximumReelPlayback();
+  initFeedVideoHandoff();
   registerMenuCommand();
 
   getTranslationText(state.lang)
@@ -3726,6 +3740,485 @@
       manager.records.delete(video);
       manager.videos.delete(video);
     });
+  }
+
+  /**
+   * initFeedVideoHandoff
+   * @description Continue a feed video in the post or Reel opened from it
+   *              instead of restarting it, and return the post's position and
+   *              play state to the feed video when the post closes.
+   *
+   * @return {void}
+   */
+  function initFeedVideoHandoff() {
+    const handoff = state.GL_feedHandoff;
+
+    document.addEventListener("click", captureFeedVideoHandoff, true);
+    ["pointerdown", "keydown"].forEach(function (eventName) {
+      document.addEventListener(eventName, markFeedVideoHandoffInput, true);
+    });
+    window.addEventListener("popstate", queueFeedVideoHandoffCheck);
+
+    new MutationObserver(function (mutations) {
+      if (handoff.pending) {
+        mutations.forEach(function (mutation) {
+          mutation.addedNodes.forEach(function (node) {
+            if (node.nodeType !== Node.ELEMENT_NODE) return;
+            if (node instanceof HTMLVideoElement) {
+              watchFeedVideoHandoffTarget(node);
+            }
+            node.querySelectorAll("video").forEach(watchFeedVideoHandoffTarget);
+          });
+        });
+      }
+      if (handoff.link) queueFeedVideoHandoffCheck();
+    }).observe(document, {
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  /**
+   * @param {Event} event
+   * @return {void}
+   */
+  function markFeedVideoHandoffInput(event) {
+    if (event.isTrusted) state.GL_feedHandoff.userInputAt = performance.now();
+  }
+
+  /**
+   * captureFeedVideoHandoff
+   * @description Remember the feed video of the post a click may open. The
+   *              click itself is left untouched.
+   *
+   * @param {MouseEvent} event
+   * @return {void}
+   */
+  function captureFeedVideoHandoff(event) {
+    if (
+      !USER_SETTING.CONTINUE_FEED_VIDEO_PLAYBACK ||
+      !event.isTrusted ||
+      event.button !== 0 ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    const target = event.target;
+    if (
+      !(target instanceof Element) ||
+      target instanceof HTMLVideoElement ||
+      target.closest(NATIVE_CONTROLS_EXCLUDED_SELECTOR)
+    ) {
+      return;
+    }
+
+    const article = target.closest("article");
+    if (!article || article.closest('div[role="dialog"]')) return;
+
+    const source = findFeedVideoHandoffSource(article);
+    if (!source) return;
+
+    const shortcodes = new Set();
+    [
+      target.closest("a[href]"),
+      ...article.querySelectorAll(
+        'a[href*="/p/"], a[href*="/reel/"], a[href*="/reels/"]',
+      ),
+    ].forEach(function (anchor) {
+      const shortcode = anchor ? extractPostPathFromURL(anchor.href) : null;
+      if (shortcode) shortcodes.add(shortcode);
+    });
+    if (shortcodes.size === 0) return;
+
+    state.GL_feedHandoff.pending = {
+      article,
+      at: performance.now(),
+      duration: source.duration,
+      playing: isFeedVideoHandoffPlaying(source),
+      shortcodes,
+      source,
+      time: source.currentTime,
+      watched: new WeakSet(),
+    };
+  }
+
+  /**
+   * @param {HTMLElement} article
+   * @return {?HTMLVideoElement}
+   */
+  function findFeedVideoHandoffSource(article) {
+    let best = null;
+    let bestScore = -Infinity;
+
+    article.querySelectorAll("video").forEach(function (video) {
+      if (
+        video.readyState < HTMLMediaElement.HAVE_METADATA ||
+        !isActiveReelVideo(video)
+      ) {
+        return;
+      }
+
+      const playing = isFeedVideoHandoffPlaying(video);
+      // A video that never started has no position worth carrying over.
+      if (!playing && !(video.currentTime > 0)) return;
+
+      const score = (playing ? 1e9 : 0) + maximumReelActivityScore(video);
+      if (score > bestScore) {
+        best = video;
+        bestScore = score;
+      }
+    });
+
+    return best;
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @return {Boolean}
+   */
+  function isFeedVideoHandoffPlaying(video) {
+    if (!video.paused && !video.ended) return true;
+
+    // A Reel held while its maximum-quality source loads is still playing.
+    const operation = state.GL_reelQuality.videoState.get(video);
+    return Boolean(operation && !operation.finished && operation.wantsPlayback);
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @return {Boolean}
+   */
+  function isFeedVideoHandoffSettling(video) {
+    const operation = state.GL_reelQuality.videoState.get(video);
+    return (
+      Boolean(operation && !operation.finished) ||
+      video.seeking ||
+      video.readyState < HTMLMediaElement.HAVE_METADATA
+    );
+  }
+
+  /**
+   * watchFeedVideoHandoffTarget
+   * @description Wait until a newly added player is the visible player of the
+   *              opened post, then continue the feed video in it.
+   *
+   * @param {HTMLVideoElement} video
+   * @return {void}
+   */
+  function watchFeedVideoHandoffTarget(video) {
+    const handoff = state.GL_feedHandoff;
+    const pending = handoff.pending;
+    if (!pending) return;
+    if (performance.now() - pending.at > FEED_VIDEO_HANDOFF_WINDOW) {
+      handoff.pending = null;
+      return;
+    }
+    if (
+      video === pending.source ||
+      pending.watched.has(video) ||
+      pending.article.contains(video)
+    ) {
+      return;
+    }
+    pending.watched.add(video);
+
+    const eventNames = [
+      "loadedmetadata",
+      "loadeddata",
+      "canplay",
+      "play",
+      "playing",
+      "timeupdate",
+    ];
+    const release = function () {
+      clearTimeout(timer);
+      eventNames.forEach((name) => video.removeEventListener(name, attempt));
+    };
+    const attempt = function () {
+      if (handoff.pending !== pending) {
+        release();
+        return;
+      }
+      if (linkFeedVideoHandoff(pending, video)) release();
+    };
+    const timer = setTimeout(
+      release,
+      Math.max(0, pending.at + FEED_VIDEO_HANDOFF_WINDOW - performance.now()),
+    );
+
+    eventNames.forEach((name) => video.addEventListener(name, attempt));
+    attempt();
+  }
+
+  /**
+   * linkFeedVideoHandoff
+   * @description Start the opened post's player where the feed video was and
+   *              pause the feed video while the post stays open.
+   *
+   * @param {Object} pending
+   * @param {HTMLVideoElement} target
+   * @return {Boolean} Whether the pending handoff was consumed.
+   */
+  function linkFeedVideoHandoff(pending, target) {
+    const handoff = state.GL_feedHandoff;
+    const elapsed = performance.now() - pending.at;
+    if (!USER_SETTING.CONTINUE_FEED_VIDEO_PLAYBACK || elapsed > FEED_VIDEO_HANDOFF_WINDOW) {
+      handoff.pending = null;
+      return true;
+    }
+
+    // Instagram may load the player before it updates the route, and a Reel
+    // page loads its neighbors offscreen.
+    const shortcode = extractPostPathFromURL(location.href);
+    if (
+      !shortcode ||
+      !pending.shortcodes.has(shortcode) ||
+      !target.isConnected ||
+      target.readyState < HTMLMediaElement.HAVE_METADATA ||
+      !isActiveReelVideo(target)
+    ) {
+      return false;
+    }
+
+    // Another carousel item of the same post is a different video.
+    if (
+      Number.isFinite(pending.duration) &&
+      Number.isFinite(target.duration) &&
+      Math.abs(pending.duration - target.duration) >
+        FEED_VIDEO_DURATION_TOLERANCE
+    ) {
+      return true;
+    }
+
+    handoff.pending = null;
+    if (handoff.link) endFeedVideoHandoff(handoff.link);
+
+    const source = pending.source;
+    let time =
+      source.isConnected && source.readyState >= HTMLMediaElement.HAVE_METADATA
+        ? source.currentTime
+        : pending.time + (pending.playing ? elapsed / 1000 : 0);
+    if (
+      pending.playing &&
+      Number.isFinite(target.duration) &&
+      target.duration > 0 &&
+      time >= target.duration
+    ) {
+      time %= target.duration;
+    }
+    time = maximumReelSeekTime(time, target.duration);
+
+    const link = {
+      createdAt: performance.now(),
+      playing: pending.playing,
+      releaseTargetHold: null,
+      shortcode,
+      source,
+      sourceEnforcements: 0,
+      target,
+      time,
+    };
+    const trackTarget = function () {
+      if (
+        handoff.link !== link ||
+        !target.isConnected ||
+        isFeedVideoHandoffSettling(target)
+      ) {
+        return;
+      }
+      link.time = target.currentTime;
+      link.playing = isFeedVideoHandoffPlaying(target);
+    };
+    const keepSourcePaused = function () {
+      if (
+        handoff.link !== link ||
+        link.sourceEnforcements >= NATIVE_AUDIO_ENFORCEMENT_LIMIT
+      ) {
+        return;
+      }
+      link.sourceEnforcements++;
+      applyFeedVideoPlaybackState(source, false);
+    };
+    link.listeners = { keepSourcePaused, trackTarget };
+
+    ["timeupdate", "seeked", "play", "pause", "ended"].forEach(function (name) {
+      target.addEventListener(name, trackTarget);
+    });
+    source.addEventListener("play", keepSourcePaused);
+    handoff.link = link;
+
+    applyFeedVideoPlaybackState(source, false);
+
+    // A Reel that is switching to its maximum-quality source seeks to its
+    // snapshot once the new source loads.
+    const operation = state.GL_reelQuality.videoState.get(target);
+    if (operation && !operation.finished) {
+      operation.snapshot.currentTime = time;
+    }
+    if (Math.abs(target.currentTime - time) > 0.25) {
+      try {
+        target.currentTime = time;
+      } catch (_err) {
+        // The player keeps its own position if it rejects the seek.
+      }
+    }
+    link.releaseTargetHold = holdFeedVideoPlaybackState(target, link.playing);
+
+    logger("[Feed Handoff] Continued feed video in post", shortcode, {
+      playing: link.playing,
+      time: Math.round(time * 100) / 100,
+    });
+    return true;
+  }
+
+  /** @return {void} */
+  function queueFeedVideoHandoffCheck() {
+    const handoff = state.GL_feedHandoff;
+    if (!handoff.link || handoff.checkQueued) return;
+
+    handoff.checkQueued = true;
+    queueMicrotask(function () {
+      handoff.checkQueued = false;
+      const link = handoff.link;
+      // A carousel slide can unmount the player while the post stays open,
+      // so only leaving the post's route ends the handoff.
+      if (link && extractPostPathFromURL(location.href) !== link.shortcode) {
+        endFeedVideoHandoff(link);
+      }
+    });
+  }
+
+  /**
+   * endFeedVideoHandoff
+   * @description Return the post player's position and play state to the
+   *              feed video it continued.
+   *
+   * @param {Object} link
+   * @return {void}
+   */
+  function endFeedVideoHandoff(link) {
+    const handoff = state.GL_feedHandoff;
+    link.listeners.trackTarget();
+    if (handoff.link === link) handoff.link = null;
+
+    ["timeupdate", "seeked", "play", "pause", "ended"].forEach(function (name) {
+      link.target.removeEventListener(name, link.listeners.trackTarget);
+    });
+    link.source.removeEventListener("play", link.listeners.keepSourcePaused);
+    link.releaseTargetHold?.();
+
+    const source = link.source;
+    if (
+      !USER_SETTING.CONTINUE_FEED_VIDEO_PLAYBACK ||
+      !source.isConnected ||
+      source.readyState < HTMLMediaElement.HAVE_METADATA
+    ) {
+      return;
+    }
+
+    const time = maximumReelSeekTime(link.time, source.duration);
+    if (Math.abs(source.currentTime - time) > 0.25) {
+      try {
+        source.currentTime = time;
+      } catch (_err) {
+        // The feed player keeps its own position if it rejects the seek.
+      }
+    }
+
+    // Resume only into a feed that is on screen again, not one hidden behind
+    // another post or page. Instagram may still mark the feed aria-hidden
+    // while its dialog closes, so only the layout box is checked.
+    const rect = source.getBoundingClientRect();
+    const resume =
+      link.playing &&
+      !extractPostPathFromURL(location.href) &&
+      rect.width > 0 &&
+      rect.height > 0 &&
+      rect.bottom > 0 &&
+      rect.right > 0 &&
+      rect.top < innerHeight &&
+      rect.left < innerWidth;
+    holdFeedVideoPlaybackState(source, resume);
+  }
+
+  /**
+   * holdFeedVideoPlaybackState
+   * @description Apply a play state and briefly keep Instagram's own autoplay
+   *              logic from overriding it. Any user input ends the hold.
+   *
+   * @param {HTMLVideoElement} video
+   * @param {Boolean} playing
+   * @return {Function} Releases the hold.
+   */
+  function holdFeedVideoPlaybackState(video, playing) {
+    const startedAt = performance.now();
+    let enforcements = 0;
+
+    const release = function () {
+      clearTimeout(timer);
+      video.removeEventListener("play", enforce);
+      video.removeEventListener("pause", enforce);
+    };
+    const enforce = function () {
+      if (
+        state.GL_feedHandoff.userInputAt > startedAt ||
+        enforcements >= 3 ||
+        !video.isConnected
+      ) {
+        release();
+        return;
+      }
+      if (isFeedVideoHandoffPlaying(video) === playing) return;
+
+      enforcements++;
+      applyFeedVideoPlaybackState(video, playing);
+    };
+    const timer = setTimeout(release, FEED_VIDEO_HANDOFF_GUARD);
+
+    video.addEventListener("play", enforce);
+    video.addEventListener("pause", enforce);
+    applyFeedVideoPlaybackState(video, playing);
+    return release;
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @param {Boolean} playing
+   * @return {void}
+   */
+  function applyFeedVideoPlaybackState(video, playing) {
+    // The maximum-quality Reel handoff resumes or stays paused on its own.
+    const operation = state.GL_reelQuality.videoState.get(video);
+    if (operation && !operation.finished) {
+      operation.wantsPlayback = playing;
+      return;
+    }
+
+    if (!playing) {
+      if (!video.paused) video.pause();
+      return;
+    }
+    if (video.paused || video.ended) {
+      Promise.resolve(video.play()).catch(function (err) {
+        logger(
+          "[Feed Handoff] Playback resume was blocked",
+          err?.name || "play_rejected",
+        );
+      });
+    }
+  }
+
+  /**
+   * @return {void}
+   */
+  function cancelFeedVideoHandoff() {
+    const handoff = state.GL_feedHandoff;
+    handoff.pending = null;
+    if (handoff.link) endFeedVideoHandoff(handoff.link);
   }
 
   /**
@@ -11833,6 +12326,7 @@
           "Modify Renamed File Timestamp Date Format (Right-Click to Set)",
         DISABLE_VIDEO_LOOPING: "Disable Video Auto-looping",
         HTML5_VIDEO_CONTROL: "Display HTML5 Video Controller",
+        CONTINUE_FEED_VIDEO_PLAYBACK: "Continue Feed Videos in Opened Posts",
         MAX_REEL_PLAYBACK_QUALITY: "Play Reels at Maximum Quality",
         REDIRECT_CLICK_USER_STORY_PICTURE:
           "Redirect When Clicking on User's Story Picture",
@@ -11887,6 +12381,8 @@
           "Disable video auto-looping in Reels and posts.",
         HTML5_VIDEO_CONTROL_INTRO:
           "Display the native HTML5 video controls for Instagram videos.\n\nThe controls stay attached when Instagram replaces or reuses its player, and the mute and volume you choose carry over to every video.",
+        CONTINUE_FEED_VIDEO_PLAYBACK_INTRO:
+          "Opening a post or Reel from the feed continues its video from the same moment instead of restarting it, and pauses the feed copy so only one plays.\n\nClosing the post returns the feed video to the position and play state it had in the post.",
         MAX_REEL_PLAYBACK_QUALITY_INTRO:
           "Hold the active Reel's poster for up to five seconds while loading the highest-resolution complete progressive MP4 reported by Instagram. This uses more bandwidth and a private metadata request. Native playback resumes if the request is throttled, fails, times out, or Safari rejects the source. DASH downloads are separate and may provide a higher-resolution saved file.",
         REDIRECT_CLICK_USER_STORY_PICTURE_INTRO:
@@ -11930,6 +12426,10 @@
         HOTKEY_RESET: "Reset",
       },
       "pt-BR": {
+        CONTINUE_FEED_VIDEO_PLAYBACK:
+          "Continuar vídeos do feed nas publicações abertas",
+        CONTINUE_FEED_VIDEO_PLAYBACK_INTRO:
+          "Ao abrir uma publicação ou Reel pelo feed, o vídeo continua do mesmo ponto em vez de recomeçar, e a cópia do feed é pausada para que apenas um toque.\n\nAo fechar a publicação, o vídeo do feed volta para a posição e o estado de reprodução que tinha na publicação.",
         COPY_MEDIA: "Copiar mídia",
         COPY_MEDIA_WORKING: "Copiando mídia...",
         COPY_MEDIA_SUCCESS: "Mídia copiada para a área de transferência.",
@@ -12226,6 +12726,10 @@
 
         if (name === "HTML5_VIDEO_CONTROL") {
           setHTML5VideoControlsEnabled(isChecked);
+        }
+
+        if (name === "CONTINUE_FEED_VIDEO_PLAYBACK" && !isChecked) {
+          cancelFeedVideoHandoff();
         }
 
         logger("user settings", name, isChecked);
