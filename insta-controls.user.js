@@ -144,8 +144,15 @@
   const FEED_VIDEO_HANDOFF_WINDOW = 5000;
   // Renditions of one video can report slightly different durations.
   const FEED_VIDEO_DURATION_TOLERANCE = 1;
-  // Instagram's autoplay settles within this time after a player changes.
-  const FEED_VIDEO_HANDOFF_GUARD = 2000;
+  // Instagram's player settles its position and autoplay within this time.
+  const FEED_VIDEO_HANDOFF_GUARD = 3000;
+  const FEED_VIDEO_HANDOFF_TRACKED_EVENTS = [
+    "timeupdate",
+    "seeked",
+    "play",
+    "pause",
+    "ended",
+  ];
   const NATIVE_CONTROLS_EXCLUDED_SELECTOR =
     ".button_wrapper, .IG_REELS_CONTROLS, .volume_slider, .IG_POPUP_DIG, #imageViewer";
   const NATIVE_CONTROLS_INTERACTIVE_SELECTOR =
@@ -3788,8 +3795,9 @@
 
   /**
    * captureFeedVideoHandoff
-   * @description Remember the feed video of the post a click may open. The
-   *              click itself is left untouched.
+   * @description Remember the position and play state of every on-screen
+   *              video before a click that may open its post. The click
+   *              itself is left untouched.
    *
    * @param {MouseEvent} event
    * @return {void}
@@ -3816,48 +3824,12 @@
       return;
     }
 
-    const article = target.closest("article");
-    if (!article || article.closest('div[role="dialog"]')) return;
-
-    const source = findFeedVideoHandoffSource(article);
-    if (!source) return;
-
-    const shortcodes = new Set();
-    [
-      target.closest("a[href]"),
-      ...article.querySelectorAll(
-        'a[href*="/p/"], a[href*="/reel/"], a[href*="/reels/"]',
-      ),
-    ].forEach(function (anchor) {
-      const shortcode = anchor ? extractPostPathFromURL(anchor.href) : null;
-      if (shortcode) shortcodes.add(shortcode);
-    });
-    if (shortcodes.size === 0) return;
-
-    state.GL_feedHandoff.pending = {
-      article,
-      at: performance.now(),
-      duration: source.duration,
-      playing: isFeedVideoHandoffPlaying(source),
-      shortcodes,
-      source,
-      time: source.currentTime,
-      watched: new WeakSet(),
-    };
-  }
-
-  /**
-   * @param {HTMLElement} article
-   * @return {?HTMLVideoElement}
-   */
-  function findFeedVideoHandoffSource(article) {
-    let best = null;
-    let bestScore = -Infinity;
-
-    article.querySelectorAll("video").forEach(function (video) {
+    const snapshots = [];
+    document.querySelectorAll("video").forEach(function (video) {
       if (
         video.readyState < HTMLMediaElement.HAVE_METADATA ||
-        !isActiveReelVideo(video)
+        video.closest('div[role="dialog"]') ||
+        getFeedVideoHandoffVisibleRatio(video) < 0.25
       ) {
         return;
       }
@@ -3866,14 +3838,79 @@
       // A video that never started has no position worth carrying over.
       if (!playing && !(video.currentTime > 0)) return;
 
-      const score = (playing ? 1e9 : 0) + maximumReelActivityScore(video);
-      if (score > bestScore) {
-        best = video;
-        bestScore = score;
-      }
-    });
+      const post = findFeedVideoHandoffPost(video);
+      if (!post) return;
 
-    return best;
+      snapshots.push({
+        container: post.container,
+        duration: video.duration,
+        playing,
+        shortcodes: post.shortcodes,
+        source: video,
+        time: video.currentTime,
+      });
+    });
+    if (snapshots.length === 0) return;
+
+    state.GL_feedHandoff.pending = {
+      at: performance.now(),
+      snapshots,
+      watched: new WeakSet(),
+    };
+  }
+
+  /**
+   * findFeedVideoHandoffPost
+   * @description Find the closest ancestor of a video that links to a post,
+   *              which is the post the video belongs to.
+   *
+   * @param {HTMLVideoElement} video
+   * @return {?{container: Element, shortcodes: Set<String>}}
+   */
+  function findFeedVideoHandoffPost(video) {
+    const enclosingShortcode = extractPostPathFromURL(
+      video.closest("a[href]")?.href || "",
+    );
+    let element = video.parentElement;
+
+    for (let depth = 0; element && depth < 32; depth++) {
+      if (element === document.body) break;
+
+      const shortcodes = new Set();
+      if (enclosingShortcode) shortcodes.add(enclosingShortcode);
+      element
+        .querySelectorAll(
+          'a[href*="/p/"], a[href*="/reel/"], a[href*="/reels/"]',
+        )
+        .forEach(function (anchor) {
+          const shortcode = extractPostPathFromURL(anchor.href);
+          if (shortcode) shortcodes.add(shortcode);
+        });
+      if (shortcodes.size > 0) return { container: element, shortcodes };
+
+      element = element.parentElement;
+    }
+
+    return null;
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @return {Number} Share of the video's box inside the viewport.
+   */
+  function getFeedVideoHandoffVisibleRatio(video) {
+    const rect = video.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return 0;
+
+    const visibleWidth = Math.max(
+      0,
+      Math.min(rect.right, innerWidth) - Math.max(rect.left, 0),
+    );
+    const visibleHeight = Math.max(
+      0,
+      Math.min(rect.bottom, innerHeight) - Math.max(rect.top, 0),
+    );
+    return (visibleWidth * visibleHeight) / (rect.width * rect.height);
   }
 
   /**
@@ -3903,8 +3940,8 @@
 
   /**
    * watchFeedVideoHandoffTarget
-   * @description Wait until a newly added player is the visible player of the
-   *              opened post, then continue the feed video in it.
+   * @description Wait until a newly added player is the on-screen player of
+   *              the opened post, then continue the feed video in it.
    *
    * @param {HTMLVideoElement} video
    * @return {void}
@@ -3918,9 +3955,8 @@
       return;
     }
     if (
-      video === pending.source ||
       pending.watched.has(video) ||
-      pending.article.contains(video)
+      pending.snapshots.some((snapshot) => snapshot.source === video)
     ) {
       return;
     }
@@ -3961,12 +3997,15 @@
    *
    * @param {Object} pending
    * @param {HTMLVideoElement} target
-   * @return {Boolean} Whether the pending handoff was consumed.
+   * @return {Boolean} Whether this player needs no further attempts.
    */
   function linkFeedVideoHandoff(pending, target) {
     const handoff = state.GL_feedHandoff;
     const elapsed = performance.now() - pending.at;
-    if (!USER_SETTING.CONTINUE_FEED_VIDEO_PLAYBACK || elapsed > FEED_VIDEO_HANDOFF_WINDOW) {
+    if (
+      !USER_SETTING.CONTINUE_FEED_VIDEO_PLAYBACK ||
+      elapsed > FEED_VIDEO_HANDOFF_WINDOW
+    ) {
       handoff.pending = null;
       return true;
     }
@@ -3976,34 +4015,52 @@
     const shortcode = extractPostPathFromURL(location.href);
     if (
       !shortcode ||
-      !pending.shortcodes.has(shortcode) ||
       !target.isConnected ||
       target.readyState < HTMLMediaElement.HAVE_METADATA ||
-      !isActiveReelVideo(target)
+      getFeedVideoHandoffVisibleRatio(target) < 0.5
     ) {
       return false;
     }
 
+    const matches = pending.snapshots.filter(
+      (snapshot) =>
+        snapshot.shortcodes.has(shortcode) &&
+        !snapshot.container.contains(target),
+    );
+    if (matches.length === 0) {
+      logger("[Feed Handoff] Opened post has no matching feed video", shortcode);
+      handoff.pending = null;
+      return true;
+    }
+
     // Another carousel item of the same post is a different video.
-    if (
-      Number.isFinite(pending.duration) &&
-      Number.isFinite(target.duration) &&
-      Math.abs(pending.duration - target.duration) >
-        FEED_VIDEO_DURATION_TOLERANCE
-    ) {
+    const snapshot = matches
+      .filter(
+        (candidate) =>
+          !Number.isFinite(candidate.duration) ||
+          !Number.isFinite(target.duration) ||
+          Math.abs(candidate.duration - target.duration) <=
+            FEED_VIDEO_DURATION_TOLERANCE,
+      )
+      .sort((a, b) => Number(b.playing) - Number(a.playing))[0];
+    if (!snapshot) {
+      logger("[Feed Handoff] Skipped a player of another length", shortcode, {
+        feed: matches.map((candidate) => candidate.duration),
+        post: target.duration,
+      });
       return true;
     }
 
     handoff.pending = null;
     if (handoff.link) endFeedVideoHandoff(handoff.link);
 
-    const source = pending.source;
+    const source = snapshot.source;
     let time =
       source.isConnected && source.readyState >= HTMLMediaElement.HAVE_METADATA
         ? source.currentTime
-        : pending.time + (pending.playing ? elapsed / 1000 : 0);
+        : snapshot.time + (snapshot.playing ? elapsed / 1000 : 0);
     if (
-      pending.playing &&
+      snapshot.playing &&
       Number.isFinite(target.duration) &&
       target.duration > 0 &&
       time >= target.duration
@@ -4014,8 +4071,10 @@
 
     const link = {
       createdAt: performance.now(),
-      playing: pending.playing,
+      playing: snapshot.playing,
       releaseTargetHold: null,
+      seekCorrections: 0,
+      seekTime: time,
       shortcode,
       source,
       sourceEnforcements: 0,
@@ -4030,6 +4089,8 @@
       ) {
         return;
       }
+      if (correctFeedVideoHandoffSeek(link)) return;
+
       link.time = target.currentTime;
       link.playing = isFeedVideoHandoffPlaying(target);
     };
@@ -4045,33 +4106,81 @@
     };
     link.listeners = { keepSourcePaused, trackTarget };
 
-    ["timeupdate", "seeked", "play", "pause", "ended"].forEach(function (name) {
+    FEED_VIDEO_HANDOFF_TRACKED_EVENTS.forEach(function (name) {
       target.addEventListener(name, trackTarget);
     });
     source.addEventListener("play", keepSourcePaused);
     handoff.link = link;
 
     applyFeedVideoPlaybackState(source, false);
+    seekFeedVideoHandoffTarget(link);
+    // The seek above can already have tracked the player's pre-autoplay
+    // state, so the feed's state at the click decides.
+    link.releaseTargetHold = holdFeedVideoPlaybackState(
+      target,
+      snapshot.playing,
+    );
+
+    logger("[Feed Handoff] Continued feed video in post", shortcode, {
+      playing: snapshot.playing,
+      time: Math.round(time * 100) / 100,
+    });
+    return true;
+  }
+
+  /**
+   * @param {Object} link
+   * @return {void}
+   */
+  function seekFeedVideoHandoffTarget(link) {
+    const target = link.target;
 
     // A Reel that is switching to its maximum-quality source seeks to its
     // snapshot once the new source loads.
     const operation = state.GL_reelQuality.videoState.get(target);
     if (operation && !operation.finished) {
-      operation.snapshot.currentTime = time;
+      operation.snapshot.currentTime = link.seekTime;
     }
-    if (Math.abs(target.currentTime - time) > 0.25) {
-      try {
-        target.currentTime = time;
-      } catch (_err) {
-        // The player keeps its own position if it rejects the seek.
-      }
-    }
-    link.releaseTargetHold = holdFeedVideoPlaybackState(target, link.playing);
+    if (Math.abs(target.currentTime - link.seekTime) <= 0.25) return;
 
-    logger("[Feed Handoff] Continued feed video in post", shortcode, {
-      playing: link.playing,
-      time: Math.round(time * 100) / 100,
+    try {
+      target.currentTime = link.seekTime;
+    } catch (_err) {
+      // The player keeps its own position if it rejects the seek.
+    }
+  }
+
+  /**
+   * correctFeedVideoHandoffSeek
+   * @description Instagram's player can rewind itself to the start while it
+   *              initializes. Seek again unless the user is operating it.
+   *
+   * @param {Object} link
+   * @return {Boolean} Whether a seek was re-applied.
+   */
+  function correctFeedVideoHandoffSeek(link) {
+    const target = link.target;
+    const now = performance.now();
+    const guardSeconds = FEED_VIDEO_HANDOFF_GUARD / 1000;
+    if (
+      now - link.createdAt > FEED_VIDEO_HANDOFF_GUARD ||
+      state.GL_feedHandoff.userInputAt > link.createdAt ||
+      link.seekCorrections >= 3 ||
+      link.seekTime < 1 ||
+      target.currentTime >= link.seekTime - 1 ||
+      // A short video may have legitimately looped back to its start.
+      (Number.isFinite(target.duration) &&
+        link.seekTime > target.duration - guardSeconds - 1)
+    ) {
+      return false;
+    }
+
+    link.seekCorrections++;
+    logger("[Feed Handoff] Player rewound itself; seeking again", {
+      position: Math.round(target.currentTime * 100) / 100,
+      seekTime: Math.round(link.seekTime * 100) / 100,
     });
+    seekFeedVideoHandoffTarget(link);
     return true;
   }
 
@@ -4105,7 +4214,7 @@
     link.listeners.trackTarget();
     if (handoff.link === link) handoff.link = null;
 
-    ["timeupdate", "seeked", "play", "pause", "ended"].forEach(function (name) {
+    FEED_VIDEO_HANDOFF_TRACKED_EVENTS.forEach(function (name) {
       link.target.removeEventListener(name, link.listeners.trackTarget);
     });
     link.source.removeEventListener("play", link.listeners.keepSourcePaused);
@@ -4130,18 +4239,11 @@
     }
 
     // Resume only into a feed that is on screen again, not one hidden behind
-    // another post or page. Instagram may still mark the feed aria-hidden
-    // while its dialog closes, so only the layout box is checked.
-    const rect = source.getBoundingClientRect();
+    // another post or page.
     const resume =
       link.playing &&
       !extractPostPathFromURL(location.href) &&
-      rect.width > 0 &&
-      rect.height > 0 &&
-      rect.bottom > 0 &&
-      rect.right > 0 &&
-      rect.top < innerHeight &&
-      rect.left < innerWidth;
+      getFeedVideoHandoffVisibleRatio(source) > 0;
     holdFeedVideoPlaybackState(source, resume);
   }
 
