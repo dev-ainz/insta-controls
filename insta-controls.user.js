@@ -17,7 +17,7 @@
 // @name:zh-CN         insta-controls
 // @name:zh-TW         insta-controls
 // @namespace          https://github.com/dev-ainz/insta-controls/
-// @version            v1.3.12
+// @version            v1.3.13
 // @description        Download photos and videos from Instagram posts in one click, including Stories, Reels, and profile pictures.
 // @description:ar     نزّل صورًا ومقاطع فيديو من منشورات Instagram بنقرة واحدة، بما في ذلك القصص وReels وصور الملف الشخصي.
 // @description:de     Lade Fotos und Videos aus Instagram-Beiträgen mit einem Klick herunter, einschließlich Stories, Reels und Profilbildern.
@@ -137,6 +137,9 @@
   // How long a click on the picture waits for a second click before it plays
   // or pauses, so a double-click can like the post without a playback flicker.
   const NATIVE_CONTROLS_DOUBLE_CLICK_DELAY = 300;
+  // How long a clicked picture stays shielded for the second click of a
+  // double-click; covers common system double-click times.
+  const NATIVE_CONTROLS_DOUBLE_CLICK_WINDOW = 500;
   // Instagram rewrites the audio state within a few ms of a playback
   // transition, so changes inside this window are never the user's.
   const NATIVE_AUDIO_TRANSITION_GRACE = 250;
@@ -1425,6 +1428,21 @@
     }
 
     /* Instagram's volume button duplicates the native volume control. */
+    /* Briefly covers a clicked picture so the rest of a double-click reaches
+       neither the browser's video controls nor Instagram's media link. */
+    .insta-controls-native-click-shield {
+      position: fixed !important;
+      z-index: 2147483647 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: 0 !important;
+      background: transparent !important;
+      pointer-events: auto !important;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
     .insta-controls-native-controls-hidden {
       visibility: hidden !important;
       pointer-events: none !important;
@@ -1542,6 +1560,9 @@
       activationAudioApplied: false,
       audioPreference: readNativeAudioPreference(),
       blockerOwners: new WeakMap(),
+      clickShield: null,
+      clickShieldTimer: null,
+      clickShieldVideo: null,
       initialized: false,
       mutationObserver: null,
       pointer: null,
@@ -2863,6 +2884,96 @@
       record.clickPlaybackToggled = true;
       toggleHTML5VideoPlayback(video);
     }, NATIVE_CONTROLS_DOUBLE_CLICK_DELAY);
+    showHTML5VideoClickShield(video);
+  }
+
+  /**
+   * showHTML5VideoClickShield
+   * @description Cover the clicked picture until a double-click could no
+   *              longer complete. Firefox's video controls enter fullscreen on
+   *              any double-click that reaches them, even a cancelled one, and
+   *              Instagram's media layer opens the post on click, so the
+   *              second click must land on neither.
+   *
+   * @param {HTMLVideoElement} video
+   * @return {void}
+   */
+  function showHTML5VideoClickShield(video) {
+    const manager = state.GL_nativeControls;
+    const rect = video.getBoundingClientRect();
+    const height = rect.height - NATIVE_CONTROLS_CLEARANCE;
+    if (rect.width < 1 || height < 1 || !document.body) return;
+
+    const shield = getHTML5VideoClickShield();
+    shield.style.left = `${rect.left}px`;
+    shield.style.top = `${rect.top}px`;
+    shield.style.width = `${rect.width}px`;
+    shield.style.height = `${height}px`;
+    if (shield.parentNode !== document.body) document.body.appendChild(shield);
+
+    manager.clickShieldVideo = video;
+    if (manager.clickShieldTimer != null) clearTimeout(manager.clickShieldTimer);
+    manager.clickShieldTimer = setTimeout(
+      hideHTML5VideoClickShield,
+      NATIVE_CONTROLS_DOUBLE_CLICK_WINDOW,
+    );
+  }
+
+  /** @return {void} */
+  function hideHTML5VideoClickShield() {
+    const manager = state.GL_nativeControls;
+    if (manager.clickShieldTimer != null) {
+      clearTimeout(manager.clickShieldTimer);
+      manager.clickShieldTimer = null;
+    }
+    manager.clickShieldVideo = null;
+    manager.clickShield?.remove();
+  }
+
+  /** @return {HTMLDivElement} */
+  function getHTML5VideoClickShield() {
+    const manager = state.GL_nativeControls;
+    if (manager.clickShield) return manager.clickShield;
+
+    const shield = document.createElement("div");
+    shield.className = "insta-controls-native-click-shield";
+    shield.setAttribute("aria-hidden", "true");
+
+    const getOwner = function () {
+      const video = manager.clickShieldVideo;
+      const record = video ? manager.records.get(video) : null;
+      return record?.active && video.isConnected ? { video, record } : null;
+    };
+    const swallow = function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    // Keep focus and text selection where they were.
+    shield.addEventListener("mousedown", swallow);
+    shield.addEventListener("click", function (event) {
+      swallow(event);
+      const owner = getOwner();
+      if (owner && event.isTrusted && event.button === 0) {
+        handleHTML5VideoPictureClick(owner.video, owner.record, event);
+      }
+    });
+    shield.addEventListener("dblclick", function (event) {
+      swallow(event);
+      const owner = getOwner();
+      hideHTML5VideoClickShield();
+      if (owner && event.isTrusted && event.button === 0) {
+        forwardHTML5VideoDoubleClick(owner.video, owner.record, event);
+      }
+    });
+    // Anything but a second click means the double-click is over.
+    shield.addEventListener("contextmenu", hideHTML5VideoClickShield);
+    shield.addEventListener("wheel", hideHTML5VideoClickShield, {
+      passive: true,
+    });
+
+    manager.clickShield = shield;
+    return shield;
   }
 
   /**
@@ -2907,8 +3018,6 @@
         bubbles: true,
         cancelable: true,
         composed: true,
-        // The userscript's own window is a sandbox proxy, not a Window.
-        view: event.view,
         detail: event.detail,
         screenX: event.screenX,
         screenY: event.screenY,
@@ -3421,6 +3530,7 @@
       record.clickPlaybackTimer = null;
     }
     record.clickPlaybackToggled = false;
+    if (manager.clickShieldVideo === video) hideHTML5VideoClickShield();
     clearHTML5VideoAudioHandoff(video);
     record.audioState = readHTML5VideoAudioState(video);
     record.audioStateUpdatedAt = performance.now();
