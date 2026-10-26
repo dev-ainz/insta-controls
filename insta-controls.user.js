@@ -2625,6 +2625,10 @@
 
       event.stopPropagation();
       if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+
+      if (event.type === "dblclick") {
+        forwardHTML5VideoDoubleClick(video, record, event);
+      }
     };
     const stopDrag = function (event) {
       if (!record.active) return;
@@ -2785,6 +2789,83 @@
     }
 
     return record;
+  }
+
+  /**
+   * forwardHTML5VideoDoubleClick
+   * @description Browsers toggle fullscreen when a video with native controls
+   *              is double-clicked. Over the picture, hand the double-click to
+   *              Instagram's media layer instead so it likes the post.
+   *
+   * @param {HTMLVideoElement} video
+   * @param {Object} record
+   * @param {MouseEvent} event
+   * @return {void}
+   */
+  function forwardHTML5VideoDoubleClick(video, record, event) {
+    if (!event.isTrusted || event.button !== 0) return;
+
+    const fullscreenElement =
+      document.fullscreenElement || document.webkitFullscreenElement;
+    if (fullscreenElement && fullscreenElement.contains(video)) return;
+
+    // Double-clicks on the native control bar belong to the browser.
+    const rect = video.getBoundingClientRect();
+    if (event.clientY >= rect.bottom - NATIVE_CONTROLS_CLEARANCE) return;
+
+    event.preventDefault();
+
+    const target = findHTML5VideoDoubleClickTarget(
+      video,
+      record,
+      event.clientX,
+      event.clientY,
+    );
+    if (!target) return;
+
+    target.dispatchEvent(
+      new MouseEvent("dblclick", {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        view: window,
+        detail: event.detail,
+        screenX: event.screenX,
+        screenY: event.screenY,
+        clientX: event.clientX,
+        clientY: event.clientY,
+        ctrlKey: event.ctrlKey,
+        shiftKey: event.shiftKey,
+        altKey: event.altKey,
+        metaKey: event.metaKey,
+        button: event.button,
+        buttons: event.buttons,
+      }),
+    );
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @param {Object} record
+   * @param {Number} x
+   * @param {Number} y
+   * @return {?Element}
+   */
+  function findHTML5VideoDoubleClickTarget(video, record, x, y) {
+    // The click-through layer under the pointer is what Instagram would have
+    // received; prefer the innermost one when layers are nested.
+    const hits = Array.from(record.blockers).filter(function (element) {
+      if (!element.isConnected) return false;
+      const rect = element.getBoundingClientRect();
+      return (
+        x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
+      );
+    });
+    const innermost = hits.find(function (element) {
+      return !hits.some((other) => other !== element && element.contains(other));
+    });
+
+    return innermost || video.parentElement;
   }
 
   /**
