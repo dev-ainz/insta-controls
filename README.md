@@ -1,6 +1,6 @@
 # Insta Loader
 
-**Version 1.3.10** — a standalone Instagram media downloader for Safari on macOS with Tampermonkey.
+**Version 1.3.11** — a standalone Instagram media downloader for Safari on macOS with Tampermonkey.
 
 [`insta-loader.user.js`](./insta-loader.user.js) adds a compact toolbar to visible photos and videos in posts, carousels, Reels, and the current Story. Open the selected file in a new tab, download one item, or save every item in a post. The entire downloader lives in one userscript; using it requires no build step, package installation, or external download service.
 

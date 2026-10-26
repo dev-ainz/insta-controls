@@ -17,7 +17,7 @@
 // @name:zh-CN         insta-controls
 // @name:zh-TW         insta-controls
 // @namespace          https://github.com/dev-ainz/insta-controls/
-// @version            v1.3.10
+// @version            v1.3.11
 // @description        Download photos and videos from Instagram posts in one click, including Stories, Reels, and profile pictures.
 // @description:ar     نزّل صورًا ومقاطع فيديو من منشورات Instagram بنقرة واحدة، بما في ذلك القصص وReels وصور الملف الشخصي.
 // @description:de     Lade Fotos und Videos aus Instagram-Beiträgen mit einem Klick herunter, einschließlich Stories, Reels und Profilbildern.
@@ -134,6 +134,9 @@
   const REEL_QUALITY_CACHE_MAX_AGE = 30 * 60 * 1000;
   // Height reserved above the bottom edge for the browser's native control bar.
   const NATIVE_CONTROLS_CLEARANCE = 64;
+  // How long a click on the picture waits for a second click before it plays
+  // or pauses, so a double-click can like the post without a playback flicker.
+  const NATIVE_CONTROLS_DOUBLE_CLICK_DELAY = 300;
   // Instagram rewrites the audio state within a few ms of a playback
   // transition, so changes inside this window are never the user's.
   const NATIVE_AUDIO_TRANSITION_GRACE = 250;
@@ -2626,9 +2629,20 @@
       event.stopPropagation();
       if (event.stopImmediatePropagation) event.stopImmediatePropagation();
 
-      if (event.type === "dblclick") {
+      if (event.type === "dblclick" && isHTML5VideoPictureClick(video, event)) {
+        event.preventDefault();
         forwardHTML5VideoDoubleClick(video, record, event);
       }
+    };
+    const handlePictureClick = function (event) {
+      if (!record.active || !isHTML5VideoPictureClick(video, event)) return;
+
+      // The browser's own controls turn two clicks on the picture into
+      // fullscreen; cancelling them here keeps the double-click for Instagram.
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+      handleHTML5VideoPictureClick(video, record, event);
     };
     const stopDrag = function (event) {
       if (!record.active) return;
@@ -2723,6 +2737,8 @@
       arranged: new Set(),
       blockers: new Set(),
       changedPosition: false,
+      clickPlaybackTimer: null,
+      clickPlaybackToggled: false,
       enforcements: [],
       handoffAudioExpiresAt: 0,
       handoffAudioState: null,
@@ -2743,6 +2759,7 @@
       listeners: {
         beginSeek,
         finishSeek,
+        handlePictureClick,
         handleVolumeChange,
         markTransition,
         refresh,
@@ -2760,6 +2777,8 @@
     HTML5_VIDEO_TRANSITION_EVENTS.forEach(function (eventName) {
       video.addEventListener(eventName, markTransition, true);
     });
+    // Capture runs before the browser's control layer inside the video.
+    video.addEventListener("click", handlePictureClick, true);
     video.addEventListener("dragstart", stopDrag);
     video.addEventListener("loadedmetadata", refresh);
     video.addEventListener("loadeddata", refresh);
@@ -2792,10 +2811,82 @@
   }
 
   /**
+   * isHTML5VideoPictureClick
+   * @description Whether a primary click landed on the picture of a video
+   *              outside fullscreen, rather than on the native control bar.
+   *
+   * @param {HTMLVideoElement} video
+   * @param {MouseEvent} event
+   * @return {Boolean}
+   */
+  function isHTML5VideoPictureClick(video, event) {
+    if (!event.isTrusted || event.button !== 0) return false;
+
+    const fullscreenElement =
+      document.fullscreenElement || document.webkitFullscreenElement;
+    if (fullscreenElement && fullscreenElement.contains(video)) return false;
+
+    const rect = video.getBoundingClientRect();
+    return event.clientY < rect.bottom - NATIVE_CONTROLS_CLEARANCE;
+  }
+
+  /**
+   * handleHTML5VideoPictureClick
+   * @description Play or pause on a single click on the picture, and leave
+   *              playback untouched when the click starts a double-click.
+   *
+   * @param {HTMLVideoElement} video
+   * @param {Object} record
+   * @param {MouseEvent} event
+   * @return {void}
+   */
+  function handleHTML5VideoPictureClick(video, record, event) {
+    if (event.detail >= 2) {
+      if (record.clickPlaybackTimer != null) {
+        clearTimeout(record.clickPlaybackTimer);
+        record.clickPlaybackTimer = null;
+      } else if (event.detail === 2 && record.clickPlaybackToggled) {
+        // A slow double-click arrives after the first click already toggled.
+        toggleHTML5VideoPlayback(video);
+      }
+      record.clickPlaybackToggled = false;
+      return;
+    }
+
+    if (record.clickPlaybackTimer != null) {
+      clearTimeout(record.clickPlaybackTimer);
+    }
+    record.clickPlaybackToggled = false;
+    record.clickPlaybackTimer = setTimeout(function () {
+      record.clickPlaybackTimer = null;
+      if (!record.active || !video.isConnected) return;
+      record.clickPlaybackToggled = true;
+      toggleHTML5VideoPlayback(video);
+    }, NATIVE_CONTROLS_DOUBLE_CLICK_DELAY);
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @return {void}
+   */
+  function toggleHTML5VideoPlayback(video) {
+    if (!video.paused && !video.ended) {
+      video.pause();
+      return;
+    }
+
+    const playback = video.play();
+    if (playback && typeof playback.catch === "function") {
+      playback.catch(function (error) {
+        logger("[Native Controls] Playback was blocked:", error);
+      });
+    }
+  }
+
+  /**
    * forwardHTML5VideoDoubleClick
-   * @description Browsers toggle fullscreen when a video with native controls
-   *              is double-clicked. Over the picture, hand the double-click to
-   *              Instagram's media layer instead so it likes the post.
+   * @description Hand a double-click on the picture to Instagram's media layer
+   *              so it likes the post.
    *
    * @param {HTMLVideoElement} video
    * @param {Object} record
@@ -2803,18 +2894,6 @@
    * @return {void}
    */
   function forwardHTML5VideoDoubleClick(video, record, event) {
-    if (!event.isTrusted || event.button !== 0) return;
-
-    const fullscreenElement =
-      document.fullscreenElement || document.webkitFullscreenElement;
-    if (fullscreenElement && fullscreenElement.contains(video)) return;
-
-    // Double-clicks on the native control bar belong to the browser.
-    const rect = video.getBoundingClientRect();
-    if (event.clientY >= rect.bottom - NATIVE_CONTROLS_CLEARANCE) return;
-
-    event.preventDefault();
-
     const target = findHTML5VideoDoubleClickTarget(
       video,
       record,
@@ -3336,6 +3415,11 @@
       clearTimeout(record.seekAudioTimer);
       record.seekAudioTimer = null;
     }
+    if (record.clickPlaybackTimer != null) {
+      clearTimeout(record.clickPlaybackTimer);
+      record.clickPlaybackTimer = null;
+    }
+    record.clickPlaybackToggled = false;
     clearHTML5VideoAudioHandoff(video);
     record.audioState = readHTML5VideoAudioState(video);
     record.audioStateUpdatedAt = performance.now();
@@ -3815,6 +3899,11 @@
       HTML5_VIDEO_TRANSITION_EVENTS.forEach(function (eventName) {
         video.removeEventListener(eventName, record.listeners.markTransition, true);
       });
+      video.removeEventListener(
+        "click",
+        record.listeners.handlePictureClick,
+        true,
+      );
       video.removeEventListener("dragstart", record.listeners.stopDrag);
       video.removeEventListener("loadedmetadata", record.listeners.refresh);
       video.removeEventListener("loadeddata", record.listeners.refresh);
