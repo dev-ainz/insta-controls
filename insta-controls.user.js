@@ -1,0 +1,12323 @@
+// ==UserScript==
+// @name               insta-controls
+// @name:ar            insta-controls
+// @name:de            insta-controls
+// @name:es            insta-controls
+// @name:fr            insta-controls
+// @name:id            insta-controls
+// @name:it            insta-controls
+// @name:ja            insta-controls
+// @name:ko            insta-controls
+// @name:pt-BR         insta-controls
+// @name:ro            insta-controls
+// @name:ru            insta-controls
+// @name:th            insta-controls
+// @name:tr            insta-controls
+// @name:vi            insta-controls
+// @name:zh-CN         insta-controls
+// @name:zh-TW         insta-controls
+// @namespace          https://github.com/dev-ainz/insta-controls/
+// @version            v1.3.4
+// @description        Download photos and videos from Instagram posts in one click, including Stories, Reels, and profile pictures.
+// @description:ar     نزّل صورًا ومقاطع فيديو من منشورات Instagram بنقرة واحدة، بما في ذلك القصص وReels وصور الملف الشخصي.
+// @description:de     Lade Fotos und Videos aus Instagram-Beiträgen mit einem Klick herunter, einschließlich Stories, Reels und Profilbildern.
+// @description:es     Descarga fotos y videos de publicaciones de Instagram con un clic, incluyendo Stories, Reels y fotos de perfil.
+// @description:fr     Téléchargez en un clic les photos et vidéos des publications Instagram, y compris les Stories, les Reels et les photos de profil.
+// @description:id     Unduh foto dan video dari postingan Instagram dalam satu klik, termasuk Stories, Reels, dan foto profil.
+// @description:it     Scarica foto e video dai post di Instagram con un solo clic, incluse Storie, Reels e foto del profilo.
+// @description:ja     Instagramの投稿の写真や動画をワンクリックでダウンロード。ストーリー、リール、プロフィール写真にも対応。
+// @description:ko     한 번의 클릭으로 Instagram 게시물의 사진과 동영상을 다운로드하고, 스토리, 릴스, 프로필 사진도 지원합니다.
+// @description:pt-BR  Baixe fotos e vídeos de publicações do Instagram com um clique, incluindo Stories, Reels e fotos de perfil.
+// @description:ro     Descarcă cu un singur clic fotografii și videoclipuri din postările Instagram, inclusiv storyuri, reels și fotografii de profil.
+// @description:ru     Скачивайте фото и видео из публикаций Instagram в один клик, включая Stories, Reels и фото профиля.
+// @description:th     ดาวน์โหลดรูปภาพและวิดีโอจากโพสต์ Instagram ได้ในคลิกเดียว รวมถึง Stories, Reels และรูปโปรไฟล์.
+// @description:tr     Instagram gönderilerindeki fotoğraf ve videoları tek tıkla indirin; Hikayeler, Reels ve profil fotoğrafları da dahildir.
+// @description:vi     Tải xuống ảnh và video từ bài viết trên Instagram chỉ với một cú nhấp, bao gồm Stories, Reels và ảnh đại diện.
+// @description:zh-CN  一键下载 Instagram 帖子中的照片和视频，还包括快拍、Reels 和头像。
+// @description:zh-TW  一鍵下載 Instagram 貼文中的照片、影片，還包含限時動態、Reels 與大頭貼。
+// @author             Ainz; based on insta-loader by paytonison and IG Helper by SN-Koarashi (5026)
+// @match              https://*.instagram.com/*
+// @grant              GM_addStyle
+// @grant              GM_download
+// @grant              GM_getResourceText
+// @grant              GM_getValue
+// @grant              GM_info
+// @grant              GM_notification
+// @grant              GM_openInTab
+// @grant              GM_registerMenuCommand
+// @grant              GM_setValue
+// @grant              GM_unregisterMenuCommand
+// @grant              GM_xmlhttpRequest
+// @connect            cdn.jsdelivr.net
+// @connect            cdninstagram.com
+// @connect            fbcdn.net
+// @connect            i.instagram.com
+// @connect            raw.githubusercontent.com
+// @connect            scontent.cdninstagram.com
+// @require            https://cdn.jsdelivr.net/npm/mediabunny@1.34.5/dist/bundles/mediabunny.min.cjs#sha256-wUFR+x2bDvpqgMAVGy2CvGvULyjTGvGy4UUAm8rae5U=
+// @require            https://code.jquery.com/jquery-3.7.1.min.js#sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=
+// @resource           INTERNAL_CSS https://cdn.jsdelivr.net/gh/SN-Koarashi/ig-helper@master/style.css
+// @resource           LOCALE_MANIFEST https://cdn.jsdelivr.net/gh/SN-Koarashi/ig-helper@master/locale/manifest.json
+// @supportURL         https://github.com/dev-ainz/insta-controls/issues
+// @homepageURL        https://github.com/dev-ainz/insta-controls/
+// @updateURL          https://raw.githubusercontent.com/dev-ainz/insta-controls/main/insta-controls.user.js
+// @downloadURL        https://raw.githubusercontent.com/dev-ainz/insta-controls/main/insta-controls.user.js
+// @icon               https://www.google.com/s2/favicons?domain=www.instagram.com&sz=32
+// @compatible         chrome >= 100
+// @compatible         edge >= 100
+// @compatible         firefox >= 100
+// @compatible         safari >= 15
+// @license            GPL-3.0-only
+// @run-at             document-start
+// ==/UserScript==
+
+// eslint-disable-next-line no-unused-vars
+(function ($, Mediabunny) {
+  "use strict";
+
+  /* initial */
+
+  /******** USER SETTINGS ********/
+  // !!! DO NOT CHANGE THIS AREA !!!
+  // ??? PLEASE CHANGE SETTING WITH MENU ???
+  const SCRIPT_NAME = "insta-controls";
+  const ISSUES_URL = "https://github.com/dev-ainz/insta-controls/issues";
+  const REMOTE_SCRIPT_URL =
+    "https://raw.githubusercontent.com/dev-ainz/insta-controls/main/insta-controls.user.js";
+  const IS_SAFARI =
+    /^((?!chrome|android|crios|fxios|edgios).)*safari/i.test(
+      navigator.userAgent,
+    );
+  const ENABLE_CONSOLE_LOGGING = false;
+
+  const USER_SETTING = {
+    AUTO_RENAME: true,
+    CAPTURE_IMAGE_VIA_MEDIA_CACHE: false,
+    CHECK_FOR_UPDATE: false,
+    DIRECT_DOWNLOAD_ALL: true,
+    DIRECT_DOWNLOAD_STORY: true,
+    DIRECT_DOWNLOAD_VISIBLE_RESOURCE: true,
+    DISABLE_VIDEO_LOOPING: false,
+    FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED: false,
+    FORCE_FETCH_ALL_RESOURCES: true,
+    FORCE_RESOURCE_VIA_MEDIA: true,
+    HTML5_VIDEO_CONTROL: false,
+    MAX_REEL_PLAYBACK_QUALITY: true,
+    MODIFY_RESOURCE_EXIF: false,
+    MODIFY_VIDEO_VOLUME: false,
+    NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST: true,
+    PREFER_DASH_MANIFEST: true,
+    REDIRECT_CLICK_USER_STORY_PICTURE: false,
+    RENAME_PUBLISH_DATE: true,
+    SCROLL_BUTTON: false,
+    SKIP_VIEW_STORY_CONFIRM: true,
+    SKIP_SHARED_WITH_YOU_DIALOG: true,
+  };
+
+  const PARENT_CHILD_MAPPING = {
+    AUTO_RENAME: ["RENAME_PUBLISH_DATE"],
+    FORCE_RESOURCE_VIA_MEDIA: [
+      "FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED",
+      "NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST",
+      "PREFER_DASH_MANIFEST",
+    ],
+  };
+  const IMAGE_CACHE_KEY = "URLS_OF_IMAGES_TEMPORARILY_STORED";
+  const IMAGE_CACHE_MAX_AGE = 12 * 60 * 60 * 1000; // 12h in ms
+  const IMAGE_MAX_CACHE_ITEMS = 300;
+  const MEDIA_LIST_SELECTOR =
+    ".IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_BODY";
+  const REEL_QUALITY_HOLD_TIMEOUT = 5000;
+  const REEL_QUALITY_FAILURE_RETRY_DELAY = 60 * 1000;
+  const REEL_QUALITY_RATE_LIMIT_COOLDOWN = 5 * 60 * 1000;
+  const REEL_QUALITY_CACHE_MAX_AGE = 30 * 60 * 1000;
+  /*******************************/
+
+  // Precision line icons shared by every insta-controls surface.
+  const SVG = {
+    DOWNLOAD:
+      '<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.75v10.5"/><path d="m8.25 10.5 3.75 3.75 3.75-3.75"/><path d="M5.25 16.75v1.5c0 .97.78 1.75 1.75 1.75h10c.97 0 1.75-.78 1.75-1.75v-1.5"/></svg>',
+    COPY:
+      '<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="11.25" height="11.25" rx="2"/><path d="M15.75 8V6.75A2 2 0 0 0 13.75 4.75h-7A2 2 0 0 0 4.75 6.75v7a2 2 0 0 0 2 2H8"/></svg>',
+    CHECK:
+      '<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.25 4.25L19 7"/></svg>',
+    NEW_TAB:
+      '<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 4.75h5.75v5.75"/><path d="m19 5-8 8"/><path d="M10.25 6h-3.5A1.75 1.75 0 0 0 5 7.75v9.5C5 18.22 5.78 19 6.75 19h9.5c.97 0 1.75-.78 1.75-1.75v-3.5"/></svg>',
+    THUMBNAIL:
+      '<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3.75" y="4.5" width="16.5" height="15" rx="2.25"/><circle cx="9" cy="9.25" r="1.25"/><path d="m5.5 17 4.25-4.25 2.75 2.75 2.25-2.25L18.5 17"/></svg>',
+    DOWNLOAD_ALL:
+      '<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 6.5 4.5 4 4.5-4"/><path d="m7.5 13.5 4.5 4 4.5-4"/></svg>',
+    CLOSE:
+      '<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="m6.5 6.5 11 11"/><path d="m17.5 6.5-11 11"/></svg>',
+    FULLSCREEN:
+      '<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9.25 4.75h-4.5v4.5"/><path d="M14.75 4.75h4.5v4.5"/><path d="M19.25 14.75v4.5h-4.5"/><path d="M9.25 19.25h-4.5v-4.5"/></svg>',
+    TURN_DEG:
+      '<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7.25 7.5h-3.5V4"/><path d="M4.4 7.1A8 8 0 1 1 4.5 16.75"/></svg>',
+  };
+
+  /*******************************/
+  const checkInterval = IS_SAFARI ? 750 : 500;
+  const buttonDetectionInterval = IS_SAFARI ? 150 : 100;
+  const downloadBatchSize = IS_SAFARI ? 2 : 5;
+  const downloadBatchDelay = IS_SAFARI ? 700 : 350;
+  const objectUrlRevokeDelay = 60000;
+  const gmDownloadObjectUrlTimeout = 30000;
+  const style = GM_getResourceText("INTERNAL_CSS");
+  const injectedButtonStyle = `
+    :root {
+      --insta-controls-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+      --insta-controls-bg: rgba(24, 24, 27, 0.92);
+      --insta-controls-bg-strong: rgba(13, 13, 15, 0.97);
+      --insta-controls-surface: rgba(255, 255, 255, 0.07);
+      --insta-controls-surface-hover: rgba(255, 255, 255, 0.12);
+      --insta-controls-surface-pressed: rgba(255, 255, 255, 0.16);
+      --insta-controls-text: #f5f5f7;
+      --insta-controls-secondary-text: rgba(235, 235, 245, 0.62);
+      --insta-controls-tertiary-text: rgba(235, 235, 245, 0.42);
+      --insta-controls-separator: rgba(255, 255, 255, 0.14);
+      --insta-controls-accent: #0a84ff;
+      --insta-controls-accent-hover: #409cff;
+      --insta-controls-danger: #ff453a;
+      --insta-controls-radius-large: 20px;
+      --insta-controls-radius-medium: 12px;
+      --insta-controls-radius-small: 9px;
+      --insta-controls-shadow: 0 24px 80px rgba(0, 0, 0, 0.48), 0 2px 12px rgba(0, 0, 0, 0.28);
+    }
+
+    .button_wrapper,
+    .IG_POPUP_DIG,
+    #imageViewer,
+    .circle_wrapper,
+    #scrollWrapper,
+    .volume_slider {
+      font-family: var(--insta-controls-font);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    .button_wrapper {
+      right: 16px;
+      line-height: 0;
+      flex-flow: row-reverse nowrap;
+      gap: 2px;
+      z-index: 6;
+      padding: 5px;
+      overflow: hidden;
+      isolation: isolate;
+      background: linear-gradient(180deg, rgba(38, 38, 42, 0.84), rgba(16, 16, 18, 0.8));
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 16px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      -webkit-backdrop-filter: saturate(180%) blur(22px);
+      backdrop-filter: saturate(180%) blur(22px);
+    }
+
+    /* Keep post controls out of the media until the pointer enters it.
+       Touch devices retain the always-visible controls because hover is unavailable. */
+    @media (hover: hover) and (pointer: fine) {
+      .insta-controls-media-host > .button_wrapper {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 140ms ease, visibility 0s linear 140ms;
+      }
+
+      .insta-controls-media-host:hover > .button_wrapper,
+      .insta-controls-media-host > .button_wrapper:focus-within {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transition-delay: 0s;
+      }
+    }
+
+    .IG_DW_MAIN,
+    .IG_COPY_MAIN,
+    .IG_NEWTAB_MAIN,
+    .IG_THUMBNAIL_MAIN,
+    .IG_DW_ALL_MAIN,
+    .IG_IMAGE_VIEWER {
+      position: relative;
+      top: 0;
+      display: inline-flex;
+      flex: 0 0 32px;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      box-sizing: border-box;
+      color: rgba(255, 255, 255, 0.82);
+      background: transparent;
+      border: 0;
+      border-radius: 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: color 160ms ease, background 160ms ease, transform 160ms ease;
+    }
+
+    .IG_DW_MAIN:hover,
+    .IG_COPY_MAIN:hover,
+    .IG_NEWTAB_MAIN:hover,
+    .IG_THUMBNAIL_MAIN:hover,
+    .IG_DW_ALL_MAIN:hover,
+    .IG_IMAGE_VIEWER:hover {
+      color: #fff;
+      background: var(--insta-controls-surface-hover);
+      transform: translateY(-1px);
+    }
+
+    .IG_DW_MAIN:active,
+    .IG_COPY_MAIN:active,
+    .IG_NEWTAB_MAIN:active,
+    .IG_THUMBNAIL_MAIN:active,
+    .IG_DW_ALL_MAIN:active,
+    .IG_IMAGE_VIEWER:active {
+      background: var(--insta-controls-surface-pressed);
+      transform: scale(0.94);
+    }
+
+    .IG_DW_ALL_MAIN.is-busy,
+    .IG_COPY_MAIN.is-busy {
+      color: #fff;
+      background: var(--insta-controls-surface-hover);
+      cursor: progress;
+      pointer-events: none;
+    }
+
+    .IG_DW_ALL_MAIN.is-busy svg,
+    .IG_COPY_MAIN.is-busy svg {
+      animation: insta-controls-breathe 900ms ease-in-out infinite alternate;
+    }
+
+    .IG_COPY_MAIN.is-success {
+      color: #32d74b;
+      background: rgba(50, 215, 75, 0.14);
+    }
+
+    .IG_COPY_MAIN.is-error {
+      color: var(--insta-controls-danger);
+      background: rgba(255, 69, 58, 0.14);
+    }
+
+    .IG_DW_MAIN svg,
+    .IG_COPY_MAIN svg,
+    .IG_NEWTAB_MAIN svg,
+    .IG_THUMBNAIL_MAIN svg,
+    .IG_DW_ALL_MAIN svg,
+    .IG_IMAGE_VIEWER svg {
+      display: block;
+      width: 19px;
+      height: 19px;
+      fill: none;
+      stroke: currentColor;
+    }
+
+    .insta-controls-clipboard-toast {
+      position: fixed;
+      left: 50%;
+      bottom: 28px;
+      z-index: 2147483647;
+      max-width: min(520px, calc(100vw - 32px));
+      padding: 11px 15px;
+      box-sizing: border-box;
+      color: var(--insta-controls-text);
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.35;
+      text-align: center;
+      background: var(--insta-controls-bg-strong);
+      border: 1px solid var(--insta-controls-separator);
+      border-radius: var(--insta-controls-radius-medium);
+      box-shadow: var(--insta-controls-shadow);
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, 10px) scale(0.98);
+      -webkit-backdrop-filter: saturate(180%) blur(22px);
+      backdrop-filter: saturate(180%) blur(22px);
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    .insta-controls-clipboard-toast.is-visible {
+      opacity: 1;
+      transform: translate(-50%, 0) scale(1);
+    }
+
+    .insta-controls-clipboard-toast.is-error {
+      color: #fff;
+      border-color: rgba(255, 69, 58, 0.55);
+    }
+
+    .IG_REELS,
+    .IG_REELS_NEWTAB,
+    .IG_REELS_THUMBNAIL,
+    .IG_DWSTORY,
+    .IG_DWSTORY_ALL,
+    .IG_DWNEWTAB,
+    .IG_DWSTORY_THUMBNAIL,
+    .IG_DWHISTORY,
+    .IG_DWHISTORY_ALL,
+    .IG_DWHINEWTAB,
+    .IG_DWHISTORY_THUMBNAIL,
+    .IG_DWPROFILE {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      box-sizing: border-box;
+      color: rgba(255, 255, 255, 0.86) !important;
+      background: var(--insta-controls-bg);
+      border: 1px solid var(--insta-controls-separator);
+      border-radius: 10px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      -webkit-backdrop-filter: saturate(160%) blur(16px);
+      backdrop-filter: saturate(160%) blur(16px);
+      transition: color 160ms ease, background 160ms ease, transform 160ms ease;
+    }
+
+    .IG_REELS:hover,
+    .IG_REELS_NEWTAB:hover,
+    .IG_REELS_THUMBNAIL:hover,
+    .IG_DWSTORY:hover,
+    .IG_DWSTORY_ALL:hover,
+    .IG_DWNEWTAB:hover,
+    .IG_DWSTORY_THUMBNAIL:hover,
+    .IG_DWHISTORY:hover,
+    .IG_DWHISTORY_ALL:hover,
+    .IG_DWHINEWTAB:hover,
+    .IG_DWHISTORY_THUMBNAIL:hover,
+    .IG_DWPROFILE:hover {
+      color: #fff;
+      background: rgba(42, 42, 46, 0.94);
+      transform: translateY(-1px);
+    }
+
+    .IG_REELS:active,
+    .IG_REELS_NEWTAB:active,
+    .IG_REELS_THUMBNAIL:active,
+    .IG_DWSTORY:active,
+    .IG_DWSTORY_ALL:active,
+    .IG_DWNEWTAB:active,
+    .IG_DWSTORY_THUMBNAIL:active,
+    .IG_DWHISTORY:active,
+    .IG_DWHISTORY_ALL:active,
+    .IG_DWHINEWTAB:active,
+    .IG_DWHISTORY_THUMBNAIL:active,
+    .IG_DWPROFILE:active {
+      transform: scale(0.94);
+    }
+
+    .IG_REELS svg,
+    .IG_REELS_NEWTAB svg,
+    .IG_REELS_THUMBNAIL svg,
+    .IG_DWSTORY svg,
+    .IG_DWSTORY_ALL svg,
+    .IG_DWNEWTAB svg,
+    .IG_DWSTORY_THUMBNAIL svg,
+    .IG_DWHISTORY svg,
+    .IG_DWHISTORY_ALL svg,
+    .IG_DWHINEWTAB svg,
+    .IG_DWHISTORY_THUMBNAIL svg,
+    .IG_DWPROFILE svg {
+      width: 17px;
+      height: 17px;
+      color: currentColor;
+      fill: none;
+      stroke: currentColor;
+    }
+
+    .IG_DWPROFILE {
+      border-radius: 50%;
+    }
+
+    /* Keep Reels controls out of Safari's dynamic backdrop-filter layers.
+       Instagram repaints this rail when Like state changes. */
+    .IG_REELS,
+    .IG_REELS_NEWTAB,
+    .IG_REELS_THUMBNAIL {
+      background: rgba(24, 24, 27, 0.97);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+
+    .IG_REELS_CONTROLS {
+      display: flex;
+      flex: 0 0 auto;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      margin: 0 0 20px;
+      pointer-events: none;
+    }
+
+    .IG_REELS_CONTROLS > .IG_REELS,
+    .IG_REELS_CONTROLS > .IG_REELS_NEWTAB,
+    .IG_REELS_CONTROLS > .IG_REELS_THUMBNAIL {
+      position: static;
+      top: auto;
+      right: auto;
+      flex: 0 0 auto;
+      pointer-events: auto;
+    }
+
+    .IG_DWSTORY_POSITION,
+    .IG_DWHISTORY_POSITION {
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      color: var(--insta-controls-text) !important;
+      background: var(--insta-controls-bg);
+      border: 1px solid var(--insta-controls-separator);
+      border-radius: 10px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+      -webkit-backdrop-filter: saturate(160%) blur(16px);
+      backdrop-filter: saturate(160%) blur(16px);
+      font-family: var(--insta-controls-font);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: -0.15px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .IG_POPUP_DIG {
+      color-scheme: dark;
+      color: var(--insta-controls-text);
+    }
+
+    .IG_POPUP_DIG.hidden {
+      display: none;
+    }
+
+    .IG_POPUP_DIG_BG {
+      background: rgba(0, 0, 0, 0.68);
+      -webkit-backdrop-filter: saturate(120%) blur(18px);
+      backdrop-filter: saturate(120%) blur(18px);
+    }
+
+    .IG_POPUP_DIG_MAIN {
+      display: flex;
+      flex-direction: column;
+      top: max(24px, 5vh);
+      width: min(680px, calc(100vw - 32px));
+      max-height: min(900px, 90svh);
+      padding: 0;
+      overflow: hidden;
+      color: var(--insta-controls-text);
+      background: linear-gradient(180deg, rgba(31, 31, 34, 0.98), rgba(16, 16, 18, 0.98));
+      border: 1px solid var(--insta-controls-separator);
+      border-radius: var(--insta-controls-radius-large);
+      box-shadow: var(--insta-controls-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+
+    .IG_POPUP_DIG_TITLE {
+      position: relative;
+      flex: 0 0 auto;
+      padding: 18px 20px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .insta-controls-dialog-header {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: start;
+      min-height: 36px;
+      padding-right: 38px;
+    }
+
+    .insta-controls-dialog-brand {
+      overflow: hidden;
+      color: var(--insta-controls-text);
+      font-size: 16px;
+      font-weight: 650;
+      line-height: 20px;
+      letter-spacing: -0.2px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .insta-controls-dialog-shortcut {
+      align-self: center;
+      color: var(--insta-controls-tertiary-text);
+      font-size: 11px;
+      line-height: 18px;
+      white-space: nowrap;
+    }
+
+    .IG_POPUP_DIG #post_info {
+      margin-top: 4px;
+      overflow: hidden;
+      color: var(--insta-controls-secondary-text);
+      font-size: 12px;
+      font-weight: 450;
+      line-height: 16px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .IG_POPUP_DIG #post_info a {
+      color: var(--insta-controls-secondary-text);
+      text-decoration: none;
+    }
+
+    .IG_POPUP_DIG #post_info a:hover {
+      color: var(--insta-controls-text);
+    }
+
+    .IG_POPUP_DIG_BODY {
+      flex: 1 1 auto;
+      min-height: 0;
+      max-height: none;
+      padding: 14px 18px 18px;
+      box-sizing: border-box;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+    }
+
+    .IG_POPUP_DIG_BODY::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .IG_POPUP_DIG_BODY::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.22);
+      border: 2px solid transparent;
+      border-radius: 999px;
+      background-clip: padding-box;
+    }
+
+    .IG_POPUP_DIG_BTN,
+    #rotate_left,
+    #rotate_right,
+    #iv_close {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      box-sizing: border-box;
+      color: var(--insta-controls-secondary-text);
+      background: transparent;
+      border-radius: 9px;
+      transition: color 160ms ease, background 160ms ease, transform 160ms ease;
+    }
+
+    .IG_POPUP_DIG_BTN:hover,
+    #rotate_left:hover,
+    #rotate_right:hover,
+    #iv_close:hover {
+      color: var(--insta-controls-text);
+      background: var(--insta-controls-surface-hover);
+    }
+
+    .IG_POPUP_DIG_BTN:active,
+    #rotate_left:active,
+    #rotate_right:active,
+    #iv_close:active {
+      transform: scale(0.92);
+    }
+
+    .IG_POPUP_DIG_BTN svg,
+    #rotate_left svg,
+    #rotate_right svg,
+    #iv_close svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+    }
+
+    .IG_POPUP_DIG button,
+    .IG_POPUP_DIG select,
+    .IG_POPUP_DIG input,
+    .IG_POPUP_DIG textarea {
+      font-family: var(--insta-controls-font);
+    }
+
+    .IG_POPUP_DIG button {
+      min-height: 32px;
+      margin: 0;
+      padding: 6px 12px;
+      color: var(--insta-controls-text);
+      background: var(--insta-controls-surface);
+      border: 1px solid var(--insta-controls-separator);
+      border-radius: var(--insta-controls-radius-small);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 550;
+      line-height: 18px;
+      transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
+    }
+
+    .IG_POPUP_DIG button:hover {
+      background: var(--insta-controls-surface-hover);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .IG_POPUP_DIG button:active {
+      background: var(--insta-controls-surface-pressed);
+      transform: scale(0.98);
+    }
+
+    .IG_POPUP_DIG button:focus-visible,
+    .IG_POPUP_DIG select:focus-visible,
+    .IG_POPUP_DIG input:focus-visible,
+    .IG_POPUP_DIG textarea:focus-visible {
+      outline: 2px solid var(--insta-controls-accent);
+      outline-offset: 2px;
+    }
+
+    .IG_POPUP_DIG button:disabled {
+      opacity: 0.42;
+    }
+
+    .IG_POPUP_DIG_TITLE #button_group {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .IG_POPUP_DIG_TITLE #button_group button {
+      flex: 1 1 220px;
+      min-width: 0;
+      white-space: normal;
+    }
+
+    .IG_POPUP_DIG_TITLE #batch_download_selected {
+      color: #fff;
+      background: var(--insta-controls-accent);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .IG_POPUP_DIG_TITLE #batch_download_selected:hover {
+      background: var(--insta-controls-accent-hover);
+    }
+
+    .IG_POPUP_DIG_TITLE .checkbox {
+      display: flex;
+      align-items: center;
+      min-height: 24px;
+      margin: 10px 0 0;
+      color: var(--insta-controls-secondary-text);
+      font-size: 12px;
+      line-height: 16px;
+    }
+
+    .IG_POPUP_DIG_TITLE .checkbox input {
+      width: 16px;
+      height: 16px;
+      margin: 0 8px 0 0;
+      accent-color: var(--insta-controls-accent);
+      transform: none;
+    }
+
+    .IG_POPUP_DIG_MEDIA .IG_POPUP_DIG_BODY {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      grid-auto-rows: max-content;
+      align-content: start;
+      gap: 10px;
+    }
+
+    .IG_POPUP_DIG_MEDIA .IG_POPUP_DIG_BODY > div {
+      position: relative;
+      min-width: 0;
+      margin: 0;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.035);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: var(--insta-controls-radius-medium);
+      transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+    }
+
+    .IG_POPUP_DIG_MEDIA .IG_POPUP_DIG_BODY > div:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.22);
+      transform: translateY(-1px);
+    }
+
+    .IG_POPUP_DIG_MEDIA .IG_POPUP_DIG_BODY a[data-needed="direct"] {
+      display: block;
+      min-height: 170px;
+      padding: 0 0 9px;
+      overflow: hidden;
+      color: var(--insta-controls-secondary-text);
+      border-radius: inherit;
+      font-size: 11px;
+      line-height: 15px;
+      text-align: center;
+      text-decoration: none;
+    }
+
+    .IG_POPUP_DIG_MEDIA .IG_POPUP_DIG_BODY a[data-needed="direct"] img {
+      width: 100%;
+      height: 140px;
+      margin-bottom: 8px;
+      object-fit: cover;
+      background: #09090a;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .IG_POPUP_DIG_MEDIA .inner_box_wrapper {
+      left: 8px;
+      top: 8px;
+      width: 24px;
+      height: 24px;
+      z-index: 4;
+      overflow: hidden;
+      background: rgba(15, 15, 17, 0.78);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      border-radius: 7px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+    }
+
+    .IG_POPUP_DIG_MEDIA .inner_box ~ span {
+      border-radius: 6px;
+    }
+
+    .IG_POPUP_DIG_MEDIA .inner_box:checked ~ span {
+      background: var(--insta-controls-accent);
+    }
+
+    .IG_POPUP_DIG_MEDIA .inner_box ~ span::after {
+      left: 7px;
+      top: 5px;
+      width: 5px;
+      height: 10px;
+      margin: 0;
+      border-color: #fff;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+    .IG_POPUP_DIG_MEDIA .inner_box {
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      transform: none;
+    }
+
+    .IG_POPUP_DIG_BODY .newTab,
+    .IG_POPUP_DIG_BODY .videoThumbnail {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      right: 8px;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      box-sizing: border-box;
+      color: rgba(255, 255, 255, 0.88);
+      background: rgba(15, 15, 17, 0.74);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+      transition: background 150ms ease, transform 150ms ease;
+    }
+
+    .IG_POPUP_DIG_BODY .newTab {
+      top: 8px;
+    }
+
+    .IG_POPUP_DIG_BODY .videoThumbnail {
+      top: 42px;
+    }
+
+    .IG_POPUP_DIG_BODY .newTab:hover,
+    .IG_POPUP_DIG_BODY .videoThumbnail:hover {
+      background: rgba(48, 48, 52, 0.9);
+      transform: translateY(-1px);
+    }
+
+    .IG_POPUP_DIG_BODY .newTab svg,
+    .IG_POPUP_DIG_BODY .videoThumbnail svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+    }
+
+    #_SNLOAD {
+      grid-column: 1 / -1;
+      display: flex;
+      min-height: 100px;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin: 0;
+      color: var(--insta-controls-secondary-text);
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    #_SNLOAD::before {
+      width: 16px;
+      height: 16px;
+      content: "";
+      border: 1.5px solid rgba(255, 255, 255, 0.2);
+      border-top-color: rgba(255, 255, 255, 0.9);
+      border-radius: 50%;
+      animation: insta-controls-spin 700ms linear infinite;
+    }
+
+    .IG_POPUP_DIG_SETTINGS .IG_POPUP_DIG_MAIN,
+    .IG_POPUP_DIG_HOTKEYS .IG_POPUP_DIG_MAIN {
+      width: min(620px, calc(100vw - 32px));
+    }
+
+    .IG_POPUP_DIG_BODY > .insta-controls-language-row {
+      position: static;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(150px, 210px);
+      align-items: center;
+      gap: 16px;
+      min-height: 48px;
+      margin: 0;
+      padding: 0 12px 10px;
+      color: var(--insta-controls-secondary-text);
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      font-size: 13px;
+    }
+
+    .IG_POPUP_DIG_BODY > .insta-controls-language-row:hover {
+      background: transparent;
+    }
+
+    .insta-controls-language-note {
+      margin-top: 3px;
+      color: var(--insta-controls-tertiary-text);
+      font-size: 11px;
+      line-height: 15px;
+    }
+
+    .IG_POPUP_DIG select,
+    .IG_POPUP_DIG input[type="text"],
+    .IG_POPUP_DIG input[type="number"],
+    .IG_POPUP_DIG input#date_format {
+      min-height: 32px;
+      padding: 5px 30px 5px 9px;
+      box-sizing: border-box;
+      color: var(--insta-controls-text);
+      background: rgba(255, 255, 255, 0.065);
+      border: 1px solid var(--insta-controls-separator);
+      border-radius: 8px;
+      outline: none;
+      font-size: 12px;
+    }
+
+    .globalSettings {
+      display: block;
+      min-height: 46px;
+      margin: 0;
+      padding: 13px 58px 13px 12px;
+      box-sizing: border-box;
+      color: var(--insta-controls-text);
+      background: transparent;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.085);
+      border-radius: 9px;
+      font-size: 13px;
+      font-weight: 450;
+      line-height: 20px;
+      transition: background 150ms ease;
+    }
+
+    .globalSettings:hover {
+      background: rgba(255, 255, 255, 0.055);
+    }
+
+    .globalSettings.child {
+      width: calc(100% - 22px);
+      margin-left: 22px;
+      color: var(--insta-controls-secondary-text);
+    }
+
+    .globalSettings .chbtn {
+      right: 12px;
+      width: 36px;
+      height: 22px;
+      background: rgba(120, 120, 128, 0.32);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      transition: background 180ms ease, border-color 180ms ease;
+    }
+
+    .globalSettings .chbtn .rounds {
+      left: 1px;
+      top: 1px;
+      width: 18px;
+      height: 18px;
+      background: #f5f5f7;
+      border-radius: 50%;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.42);
+      transition: left 180ms cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    .globalSettings input:checked ~ .chbtn {
+      background: var(--insta-controls-accent);
+      border-color: transparent;
+    }
+
+    .globalSettings input:checked ~ .chbtn .rounds {
+      left: 15px;
+      background: #fff;
+    }
+
+    .globalSettings #tempWrapper {
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 44px 0 12px;
+      box-sizing: border-box;
+      background: rgba(29, 29, 32, 0.98);
+      border-radius: inherit;
+    }
+
+    .globalSettings input#date_format {
+      top: auto;
+      width: 100%;
+      padding-right: 9px;
+      transform: none;
+    }
+
+    .globalSettings #tempWrapper input[type="range"] {
+      top: auto;
+      flex: 1;
+      width: auto;
+      accent-color: var(--insta-controls-accent);
+      transform: none;
+    }
+
+    .globalSettings #tempWrapper input[type="number"] {
+      top: auto;
+      width: 58px;
+      padding-right: 6px;
+      transform: none;
+    }
+
+    .IG_POPUP_DIG_BODY > .hotkey-settings-container {
+      position: static;
+      display: block;
+      margin: 0;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+    }
+
+    .IG_POPUP_DIG_BODY > .hotkey-settings-container:hover {
+      background: transparent;
+    }
+
+    .hotkey-setting-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding-right: 6px;
+    }
+
+    .hotkey-setting-item > span {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .hotkey-select-wrapper {
+      display: flex;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .hotkey-preset {
+      min-width: 94px;
+    }
+
+    .hotkey-conflict-warning {
+      position: absolute;
+      left: 12px;
+      bottom: -4px;
+      z-index: 3;
+      display: none;
+      color: var(--insta-controls-danger);
+      font-size: 10px;
+      line-height: 12px;
+      pointer-events: none;
+    }
+
+    .IG_POPUP_DIG_DEBUG textarea {
+      width: 100%;
+      height: min(420px, 52vh);
+      padding: 12px;
+      box-sizing: border-box;
+      resize: vertical;
+      color: #d1f7c4;
+      background: #090b09;
+      border: 1px solid var(--insta-controls-separator);
+      border-radius: var(--insta-controls-radius-medium);
+      outline: none;
+      font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .IG_POPUP_DIG_BODY > .insta-controls-dialog-actions {
+      position: static;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 12px;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+    }
+
+    .IG_POPUP_DIG_BODY > .insta-controls-dialog-actions:hover {
+      background: transparent;
+    }
+
+    .insta-controls-dialog-actions a {
+      display: inline;
+      padding: 0;
+      color: inherit;
+      font: inherit;
+      line-height: inherit;
+      text-decoration: none;
+    }
+
+    #scrollWrapper {
+      z-index: 20;
+    }
+
+    #scrollWrapper .button-up,
+    #scrollWrapper .button-down {
+      width: 34px;
+      height: 34px;
+      margin: 6px 0;
+      box-sizing: border-box;
+      background: rgba(24, 24, 27, 0.97);
+      border: 1px solid var(--insta-controls-separator);
+      border-radius: 11px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      transition: background 150ms ease, transform 150ms ease;
+    }
+
+    #scrollWrapper .button-up:hover,
+    #scrollWrapper .button-down:hover {
+      width: 34px;
+      height: 34px;
+      margin: 6px 0;
+      background: rgba(42, 42, 46, 0.94);
+      border-radius: 11px;
+      transform: translateY(-1px);
+    }
+
+    #scrollWrapper .button-up > div,
+    #scrollWrapper .button-down > div {
+      left: 12px;
+      padding: 3px;
+      border-color: rgba(255, 255, 255, 0.88);
+      border-width: 0 1.5px 1.5px 0;
+    }
+
+    #scrollWrapper .button-up > div {
+      top: 12px;
+    }
+
+    #scrollWrapper .button-down > div {
+      top: 9px;
+    }
+
+    .volume_slider > div {
+      height: 34px;
+      background: var(--insta-controls-bg);
+      border: 1px solid var(--insta-controls-separator);
+      border-radius: 999px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+      -webkit-backdrop-filter: saturate(160%) blur(16px);
+      backdrop-filter: saturate(160%) blur(16px);
+    }
+
+    .volume_slider input[type="range"]::-webkit-slider-runnable-track {
+      height: 4px;
+      background: linear-gradient(to right, var(--insta-controls-accent) 0%, var(--insta-controls-accent) var(--ig-track-progress), rgba(255, 255, 255, 0.24) var(--ig-track-progress), rgba(255, 255, 255, 0.24) 100%);
+      border-radius: 999px;
+    }
+
+    .volume_slider input[type="range"]::-moz-range-track {
+      height: 4px;
+      background: rgba(255, 255, 255, 0.24);
+      border-radius: 999px;
+    }
+
+    .volume_slider input[type="range"]::-moz-range-progress {
+      height: 4px;
+      background: var(--insta-controls-accent);
+      border-radius: 999px;
+    }
+
+    .volume_slider input[type="range"]::-webkit-slider-thumb {
+      width: 14px;
+      height: 14px;
+      margin-top: -5px;
+      background: #fff;
+      box-shadow: 0 1px 5px rgba(0, 0, 0, 0.42);
+    }
+
+    .volume_slider input[type="range"]::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      background: #fff;
+      border: 0;
+      box-shadow: 0 1px 5px rgba(0, 0, 0, 0.42);
+    }
+
+    .circle_wrapper {
+      gap: 8px;
+      min-height: 38px;
+      padding: 7px 12px 7px 9px;
+      box-sizing: border-box;
+      color: var(--insta-controls-text);
+      background: var(--insta-controls-bg);
+      border: 1px solid var(--insta-controls-separator);
+      border-radius: 999px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      backdrop-filter: saturate(180%) blur(20px);
+    }
+
+    .circle_wrapper circle {
+      width: 15px;
+      height: 15px;
+      margin: 0;
+      opacity: 1;
+      border: 1.5px solid rgba(255, 255, 255, 0.2);
+      border-top-color: rgba(255, 255, 255, 0.92);
+      border-radius: 50%;
+      animation: insta-controls-spin 700ms linear infinite;
+    }
+
+    .circle_wrapper span {
+      color: var(--insta-controls-text);
+      font-family: var(--insta-controls-font);
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 18px;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.1px;
+    }
+
+    #imageViewer {
+      color-scheme: dark;
+      color: var(--insta-controls-text);
+      background: rgba(0, 0, 0, 0.94);
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+    }
+
+    #imageViewer > #iv_header {
+      height: 56px;
+      padding: 0 18px;
+      box-sizing: border-box;
+      color: var(--insta-controls-text);
+      background: linear-gradient(180deg, rgba(28, 28, 30, 0.94), rgba(18, 18, 20, 0.86));
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      font-family: var(--insta-controls-font);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: -0.1px;
+      -webkit-backdrop-filter: saturate(160%) blur(18px);
+      backdrop-filter: saturate(160%) blur(18px);
+    }
+
+    #iv_header .iv_actions {
+      display: flex;
+      gap: 4px;
+      margin-right: 6px;
+    }
+
+    #iv_header .iv_title {
+      min-width: 0;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    #rotate_right {
+      transform: scaleX(-1);
+    }
+
+    #rotate_right:active {
+      transform: scaleX(-1) scale(0.92);
+    }
+
+    #iv_close {
+      filter: none;
+    }
+
+    #imageViewer > section {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      padding: 72px 32px 28px;
+      box-sizing: border-box;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #iv_image {
+      width: auto;
+      height: auto;
+      max-width: calc(100vw - 64px);
+      max-height: calc(100svh - 100px);
+      border-radius: 4px;
+      box-shadow: 0 18px 80px rgba(0, 0, 0, 0.52);
+    }
+
+    @keyframes insta-controls-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes insta-controls-breathe {
+      from { opacity: 0.45; transform: translateY(-1px); }
+      to { opacity: 1; transform: translateY(1px); }
+    }
+
+    @supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+      .button_wrapper,
+      .IG_REELS,
+      .IG_REELS_NEWTAB,
+      .IG_REELS_THUMBNAIL,
+      .IG_DWSTORY,
+      .IG_DWSTORY_ALL,
+      .IG_DWNEWTAB,
+      .IG_DWSTORY_THUMBNAIL,
+      .IG_DWHISTORY,
+      .IG_DWHISTORY_ALL,
+      .IG_DWHINEWTAB,
+      .IG_DWHISTORY_THUMBNAIL,
+      .IG_DWPROFILE,
+      .circle_wrapper,
+      #scrollWrapper .button-up,
+      #scrollWrapper .button-down,
+      .volume_slider > div {
+        background: rgba(20, 20, 22, 0.97);
+      }
+    }
+
+    @media (max-width: 560px) {
+      .IG_POPUP_DIG_MAIN {
+        top: 12px;
+        width: calc(100vw - 20px);
+        max-height: calc(100svh - 24px);
+        border-radius: 16px;
+      }
+
+      .IG_POPUP_DIG_TITLE {
+        padding: 14px 14px 12px;
+      }
+
+      .insta-controls-dialog-shortcut {
+        display: none;
+      }
+
+      .IG_POPUP_DIG_BODY {
+        max-height: none;
+        padding: 12px;
+      }
+
+      .IG_POPUP_DIG_MEDIA .IG_POPUP_DIG_BODY {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .IG_POPUP_DIG_BODY > .insta-controls-language-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        padding: 0 8px 10px;
+      }
+
+      .hotkey-setting-item {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .hotkey-select-wrapper {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      #imageViewer > section {
+        padding: 68px 12px 12px;
+      }
+
+      #iv_image {
+        max-width: calc(100vw - 24px);
+        max-height: calc(100svh - 80px);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .button_wrapper *,
+      .IG_POPUP_DIG *,
+      #imageViewer *,
+      #scrollWrapper *,
+      .circle_wrapper * {
+        scroll-behavior: auto;
+        transition-duration: 0.01ms;
+      }
+
+      .IG_DW_ALL_MAIN.is-busy svg {
+        animation: none;
+      }
+    }
+
+    video.insta-controls-native-controls {
+      pointer-events: auto !important;
+      touch-action: auto !important;
+    }
+
+    video.insta-controls-native-controls::-webkit-media-controls,
+    video.insta-controls-native-controls::-webkit-media-controls-enclosure,
+    video.insta-controls-native-controls::-webkit-media-controls-panel {
+      pointer-events: auto !important;
+    }
+
+    /* Only the exact media-covering layer is made click-through. Do not
+       disable its entire descendant tree or alter stacking outside the video. */
+    .insta-controls-native-controls-blocker {
+      pointer-events: none !important;
+    }
+
+    .insta-controls-reel-quality-hold {
+      position: fixed;
+      z-index: 2147483000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background-color: #050505;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: cover;
+      pointer-events: none;
+    }
+
+    .insta-controls-reel-quality-hold > img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .insta-controls-reel-quality-spinner {
+      position: relative;
+      z-index: 1;
+      width: 24px;
+      height: 24px;
+      box-sizing: border-box;
+      border: 2px solid rgba(255, 255, 255, 0.34);
+      border-top-color: rgba(255, 255, 255, 0.96);
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.42);
+      animation: insta-controls-reel-quality-spin 700ms linear infinite;
+    }
+
+    @keyframes insta-controls-reel-quality-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .insta-controls-reel-quality-spinner {
+        animation: none;
+      }
+    }
+  `;
+  const locale_manifest = JSON.parse(GM_getResourceText("LOCALE_MANIFEST"));
+
+  var state = {
+    videoVolume: GM_getValue("G_VIDEO_VOLUME")
+      ? GM_getValue("G_VIDEO_VOLUME")
+      : 1,
+    tempFetchRateLimit: false,
+    fileRenameFormat: GM_getValue("G_RENAME_FORMAT")
+      ? GM_getValue("G_RENAME_FORMAT")
+      : "%USERNAME%-%SOURCE_TYPE%-%SHORTCODE%-%YEAR%%MONTH%%DAY%_%HOUR%%MINUTE%%SECOND%_%ORIGINAL_NAME_FIRST%",
+    registerMenuIds: [],
+    locale: {},
+    lang:
+      GM_getValue("UI_LANGUAGE") ||
+      navigator.language ||
+      navigator.userLanguage,
+    currentURL: location.href,
+    firstStarted: false,
+    pageLoaded: false,
+    bulkDownloadActive: false,
+    GL_registerEventList: [],
+    GL_logger: [],
+    GL_referrer: null,
+    GL_postPath: null,
+    GL_username: null,
+    GL_repeat: null,
+    GL_dataCache: {
+      stories: {},
+      highlights: {},
+    },
+    GL_observer: new MutationObserver(function () {
+      onReadyMyDW();
+    }),
+    GL_imageCache: GM_getValue(IMAGE_CACHE_KEY, {}),
+    GL_mediaDataCache: {},
+    GL_reelQuality: {
+      activeRequest: null,
+      activeOperation: null,
+      candidateCache: new Map(),
+      cooldownUntil: 0,
+      failedAt: new Map(),
+      generation: 0,
+      hostOwners: new WeakMap(),
+      intersectionObserver: null,
+      mutationObserver: null,
+      observedVideos: new WeakSet(),
+      pendingNativeResume: null,
+      rebindHistory: new Map(),
+      scanQueued: false,
+      videoState: new WeakMap(),
+    },
+    GL_weakCache: {
+      overlay: new WeakMap(),
+      mutedButton: new WeakMap(),
+    },
+    GL_nativeControls: {
+      blockerOwners: new WeakMap(),
+      initialized: false,
+      mutationObserver: null,
+      records: new WeakMap(),
+      refreshFrame: null,
+      videos: new Set(),
+    },
+    debugHotkeyKeyCode: GM_getValue("G_HOTKEY_DEBUG_KEYCODE")
+      ? GM_getValue("G_HOTKEY_DEBUG_KEYCODE")
+      : 90,
+    settingsHotkeyKeyCode: GM_getValue("G_HOTKEY_SETTINGS_KEYCODE")
+      ? GM_getValue("G_HOTKEY_SETTINGS_KEYCODE")
+      : 87,
+    keySettingsHotkeyKeyCode: GM_getValue("G_HOTKEY_KEY_SETTINGS_KEYCODE")
+      ? GM_getValue("G_HOTKEY_KEY_SETTINGS_KEYCODE")
+      : 67,
+    downloadStoryHotkeyKeyCode: GM_getValue("G_HOTKEY_DOWNLOAD_STORY_KEYCODE")
+      ? GM_getValue("G_HOTKEY_DOWNLOAD_STORY_KEYCODE")
+      : 83,
+  };
+  var translationTextCache = null;
+  /*******************************/
+
+  // initialization script
+  initSettings();
+  GM_addStyle(style);
+  GM_addStyle(injectedButtonStyle);
+  initHTML5VideoControls();
+  initMaximumReelPlayback();
+  registerMenuCommand();
+
+  getTranslationText(state.lang)
+    .then((res) => {
+      state.locale[state.lang] = res;
+      translationTextCache = null;
+      repaintingTranslations();
+      registerMenuCommand();
+      checkingScriptUpdate(300);
+    })
+    .catch((err) => {
+      registerMenuCommand();
+      checkingScriptUpdate(300);
+
+      if (!state.lang.startsWith("en")) {
+        console.error("getTranslationText catch error:", err);
+      }
+    });
+
+  logger(
+    "Script Loaded",
+    GM_info.script.name,
+    "version:",
+    GM_info.script.version,
+  );
+  purgeCache();
+  /*******************************/
+
+  // Main Timer
+  // eslint-disable-next-line no-unused-vars
+  var timer = setInterval(function () {
+    // @run-at document-start is needed for Reel playback interception, but the
+    // existing page UI initializer still requires a body.
+    if (!document.body) return;
+
+    if (
+      document.hidden &&
+      state.currentURL === location.href &&
+      state.pageLoaded
+    ) {
+      return;
+    }
+
+    // page loading or unnecessary route
+    if (
+      ($("div#splash-screen").length > 0 &&
+        !$("div#splash-screen").is(":hidden")) ||
+      location.pathname.match(
+        /^\/(explore(\/.*)?|challenge\/?.*|direct\/?.*|qr\/?|accounts\/.*|emails\/.*|language\/?.*?|your_activity\/?.*|settings\/help(\/.*)?$)$/gi,
+      ) ||
+      !location.hostname.startsWith("www.") ||
+      location.pathname.startsWith("/auth_platform/codeentry/") ||
+      location.pathname.startsWith("/challenge/") ||
+      location.pathname.startsWith("/consent/") ||
+      location.pathname.startsWith("/accounts/") ||
+      ((location.pathname.endsWith("/followers/") ||
+        location.pathname.endsWith("/following/")) &&
+        $(`body > div[class]:not([id^="mount"]) div div[role="dialog"]`)
+          .length > 0)
+    ) {
+      state.pageLoaded = false;
+      return;
+    }
+
+    if (
+      state.currentURL != location.href ||
+      !state.firstStarted ||
+      !state.pageLoaded
+    ) {
+      logger("Main Timer", "triggering");
+
+      clearInterval(state.GL_repeat);
+      state.pageLoaded = false;
+      state.firstStarted = true;
+      state.currentURL = location.href;
+      state.GL_observer.disconnect();
+
+      // Auto-skip "X shared this with you" dialog on any ?igsh= link
+      if (
+        USER_SETTING.SKIP_SHARED_WITH_YOU_DIALOG &&
+        window.location.search.includes("igsh")
+      ) {
+        let tries = 0;
+        const skipTimer = setInterval(() => {
+          tries += 1;
+
+          // stop early if URL no longer has ?igsh (navigation changed)
+          if (!window.location.search.includes("igsh")) {
+            clearInterval(skipTimer);
+            return;
+          }
+
+          skipSharedWithYouDialog();
+
+          if (tries >= 20) {
+            clearInterval(skipTimer);
+          }
+        }, 200);
+      }
+
+      if (
+        location.pathname.startsWith("/p/") ||
+        location.pathname.match(/^\/(.*?)\/(p|reel)\//gi) ||
+        location.pathname.startsWith("/reel/")
+      ) {
+        state.GL_dataCache.stories = {};
+        state.GL_dataCache.highlights = {};
+
+        logger("isDialog");
+
+        // This is a delayed function call that prevents the dialog element from appearing before the function is called.
+        var dialogTimer = setInterval(() => {
+          // body > div[id^="mount"] section nav + div > article << (mobile page in single post) >>
+          // section:visible > main > div > div > div > div > div > hr << (single foreground post in page, non-floating // <hr> element here is literally the line beneath poster's username) >>
+          // section:visible > main > div > div > article > div > div > div > div > div > header (is the same as above, except that this is on the route of the /{username}/p/{shortcode} structure)
+          // section:visible > main > div > div.xdt5ytf << (former CSS selector for single foreground post in page, non-floating) >>
+          // <hr> is much more unique element than "div.xdt5ytf"
+          if (
+            $(`body > div[class]:not([id^="mount"]) div div[role="dialog"] article,
+                                section:visible > main > div > div > div > div > div > hr,
+                                body > div[id^="mount"] section nav + div > article,
+                                section:visible > main > div > div > article > div > div > div > div > div > header
+                            `).length > 0
+          ) {
+            clearInterval(dialogTimer);
+
+            // This is to prevent the detection of the "Modify Video Volume" setting from being too slow.
+            setTimeout(() => {
+              onReadyMyDW(false);
+            }, 15);
+          }
+        }, buttonDetectionInterval);
+
+        state.pageLoaded = true;
+      }
+
+      if (location.pathname.startsWith("/reels/")) {
+        logger("isReelsPage");
+        setTimeout(() => {
+          onReels(false);
+        }, 150);
+        state.pageLoaded = true;
+      }
+
+      if (location.pathname === "/") {
+        state.GL_dataCache.stories = {};
+        state.GL_dataCache.highlights = {};
+
+        let hasReferrer =
+          state.GL_referrer?.match(/^\/(stories|highlights)\//gi) != null;
+
+        logger("isHomepage", hasReferrer);
+        setTimeout(() => {
+          onReadyMyDW(false, hasReferrer);
+
+          const element = $(
+            'div[id^="mount"] > div > div div > section > main div:not([class]):not([style]) > div > article',
+          )?.parent()[0];
+          if (element) {
+            state.GL_observer.observe(element, {
+              childList: true,
+            });
+          }
+        }, 150);
+
+        state.pageLoaded = true;
+      }
+
+      if (
+        $("header > *[class]:first-child img[alt]").length &&
+        // eslint-disable-next-line no-useless-escape
+        location.pathname.match(
+          /^(\/)([0-9A-Za-z\.\-_]+)\/?(tagged|reels|saved)?\/?$/gi,
+        ) &&
+        !location.pathname.match(/^(\/explore\/?$|\/stories(\/.*)?$|\/p\/)/gi)
+      ) {
+        logger("isProfile");
+        setTimeout(() => {
+          onProfileAvatar(false);
+        }, 150);
+        state.pageLoaded = true;
+      }
+
+      if (!state.pageLoaded) {
+        // Call Instagram stories function
+        if (location.pathname.startsWith("/stories/highlights/")) {
+          state.GL_dataCache.highlights = {};
+
+          logger("isHighlightsStory");
+
+          onHighlightsStory(false);
+          state.GL_repeat = setInterval(() => {
+            onHighlightsStoryThumbnail(false);
+          }, checkInterval);
+
+          if ($(".IG_DWHISTORY").length) {
+            setTimeout(() => {
+              if (USER_SETTING.SKIP_VIEW_STORY_CONFIRM) {
+                var $viewStoryButton = $(
+                  'div[id^="mount"] section:last-child > div > div:not([class]) div:last-child > div[role="button"]',
+                ).filter(function () {
+                  return (
+                    $(this).children().length === 0 &&
+                    this.textContent.trim() !== ""
+                  );
+                });
+                $viewStoryButton?.trigger("click");
+              }
+
+              state.pageLoaded = true;
+            }, 150);
+          }
+        } else if (location.pathname.startsWith("/stories/")) {
+          logger("isStory");
+
+          /*
+           *
+           *  $('body div[id^="mount"] > div > div > div[class]').length >= 2 &&
+           *  $('body div[id^="mount"] > div > div > div[class]').last().find('svg > path[d^="M16.792"], svg > path[d^="M34.6 3.1c-4.5"]').length > 0 &&
+           *  $('body div[id^="mount"] > div > div > div[class]').last().find('svg > polyline + line').length > 0
+           *
+           */
+          // ? detect logo element in left-top corner
+          if (
+            $('div[id^="mount"] section > div > a[href="/"]').length > 0 ||
+            $('div[id^="mount"] section > div > a[href^="/?hl="]').length > 0 ||
+            $('div[id^="mount"] section i[aria-label="Instagram"]').length > 0
+          ) {
+            $(".IG_DWSTORY").remove();
+            $(".IG_DWNEWTAB").remove();
+            if ($(".IG_DWSTORY_THUMBNAIL").length) {
+              $(".IG_DWSTORY_THUMBNAIL").remove();
+            }
+            if ($(".IG_DWSTORY_POSITION").length) {
+              $(".IG_DWSTORY_POSITION").remove();
+            }
+
+            onStory(false);
+
+            // Prevent buttons from being eaten by black holes sometimes
+            setTimeout(() => {
+              onStory(false);
+            }, 150);
+          }
+
+          if ($(".IG_DWSTORY").length) {
+            setTimeout(() => {
+              if (USER_SETTING.SKIP_VIEW_STORY_CONFIRM) {
+                var $viewStoryButton = $(
+                  'div[id^="mount"] section:last-child > div > div:not([class]) div:last-child > div[role="button"]',
+                ).filter(function () {
+                  return (
+                    $(this).children().length === 0 &&
+                    this.textContent.trim() !== ""
+                  );
+                });
+                $viewStoryButton?.trigger("click");
+              }
+
+              state.pageLoaded = true;
+            }, 150);
+          }
+        } else {
+          state.pageLoaded = false;
+          // Remove icons
+          if ($(".IG_DWSTORY").length) {
+            $(".IG_DWSTORY").remove();
+          }
+          if ($(".IG_DWSTORY_ALL").length) {
+            $(".IG_DWSTORY_ALL").remove();
+          }
+          if ($(".IG_DWNEWTAB").length) {
+            $(".IG_DWNEWTAB").remove();
+          }
+          if ($(".IG_DWSTORY_THUMBNAIL").length) {
+            $(".IG_DWSTORY_THUMBNAIL").remove();
+          }
+          if ($(".IG_DWSTORY_POSITION").length) {
+            $(".IG_DWSTORY_POSITION").remove();
+          }
+
+          if ($(".IG_DWHISTORY").length) {
+            $(".IG_DWHISTORY").remove();
+          }
+          if ($(".IG_DWHISTORY_ALL").length) {
+            $(".IG_DWHISTORY_ALL").remove();
+          }
+          if ($(".IG_DWHINEWTAB").length) {
+            $(".IG_DWHINEWTAB").remove();
+          }
+          if ($(".IG_DWHISTORY_THUMBNAIL").length) {
+            $(".IG_DWHISTORY_THUMBNAIL").remove();
+          }
+          if ($(".IG_DWHISTORY_POSITION").length) {
+            $(".IG_DWHISTORY_POSITION").remove();
+          }
+        }
+      }
+
+      checkingScriptUpdate(300);
+      state.GL_referrer = new URL(location.href).pathname;
+    }
+  }, checkInterval);
+
+  /* Main functions */
+
+  /**
+   * getHighlightsStoryUsername
+   * @description Get the current highlight story owner's username.
+   *
+   * @return {?String}
+   */
+  function getHighlightsStoryUsername() {
+    let href = $('body > div section:visible a[href^="/"]')
+      .filter(function () {
+        return (
+          $(this)
+            .attr("href")
+            .split("/")
+            .filter((e) => e.length > 0).length === 1
+        );
+      })
+      .first()
+      .attr("href");
+
+    return href
+      ?.split("/")
+      .filter((e) => e.length > 0)
+      .at(0);
+  }
+
+  /**
+   * onHighlightsStoryAll
+   * @description Trigger user's highlight all download event.
+   *
+   * @return {void}
+   */
+  async function onHighlightsStoryAll() {
+    updateLoadingBar(true);
+
+    let date = new Date().getTime();
+    let timestamp = Math.floor(date / 1000);
+    let highlightId = location.href.replace(/\/$/gi, "").split("/").at(-1);
+    let highStories = await getHighlightStories(highlightId);
+    let username = highStories.data.reels_media[0].owner.username;
+
+    if (USER_SETTING.DIRECT_DOWNLOAD_STORY) {
+      let complete = 0;
+      setDownloadProgress(
+        complete,
+        highStories.data.reels_media[0].items.length,
+      );
+
+      highStories.data.reels_media[0].items.forEach((item, idx) => {
+        setTimeout(() => {
+          if (USER_SETTING.RENAME_PUBLISH_DATE) {
+            timestamp = item.taken_at_timestamp;
+          }
+
+          item.display_resources.sort(function (a, b) {
+            if (a.config_width < b.config_width) return 1;
+            if (a.config_width > b.config_width) return -1;
+            return 0;
+          });
+
+          if (item.is_video) {
+            (async () => {
+              if (
+                USER_SETTING.FORCE_RESOURCE_VIA_MEDIA &&
+                USER_SETTING.PREFER_DASH_MANIFEST &&
+                !state.tempFetchRateLimit
+              ) {
+                const mi = await getMediaInfo(item.id);
+                if (mi?.status === "ok") {
+                  const handled = await tryHandleDashFromMediaItem({
+                    mediaItem: mi.items[0],
+                    username,
+                    sourceType: "highlights",
+                    timestamp,
+                    shortcode: mi.items[0].id,
+                    isPreview: false,
+                  });
+                  if (handled) {
+                    setDownloadProgress(
+                      ++complete,
+                      highStories.data.reels_media[0].items.length,
+                    );
+                    return;
+                  }
+                } else if (
+                  USER_SETTING.FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED
+                ) {
+                  state.tempFetchRateLimit = true;
+                }
+              }
+
+              await saveFiles(item.video_resources[0].src, {
+                username,
+                sourceType: "highlights",
+                timestamp,
+                filetype: "mp4",
+                shortcode: item.id,
+              });
+              setDownloadProgress(
+                ++complete,
+                highStories.data.reels_media[0].items.length,
+              );
+            })();
+          } else {
+            saveFiles(item.display_resources[0].src, {
+              username,
+              sourceType: "highlights",
+              timestamp,
+              filetype: "jpg",
+              shortcode: item.id,
+            }).then(() => {
+              setDownloadProgress(
+                ++complete,
+                highStories.data.reels_media[0].items.length,
+              );
+            });
+          }
+        }, 100 * idx);
+      });
+    } else {
+      IG_createDM(false, true);
+      createStoryListDOM(highStories, "highlights");
+    }
+  }
+
+  /**
+   * onHighlightsStory
+   * @description Trigger user's highlight download event or button display event.
+   *
+   * @param  {Boolean}  isDownload - Check if it is a download operation
+   * @param  {Boolean}  isPreview - Check if it is need to open new tab
+   * @return {void}
+   */
+  async function onHighlightsStory(isDownload, isPreview) {
+    var username = getHighlightsStoryUsername();
+
+    if (isDownload) {
+      let date = new Date().getTime();
+      let timestamp = Math.floor(date / 1000);
+      let highlightId = location.href.replace(/\/$/gi, "").split("/").at(-1);
+      let nowIndex =
+        $("body > div section._ac0a header._ac0k > ._ac3r ._ac3n ._ac3p[style]")
+          .length ||
+        $(
+          "body > div section:visible > div > div:not([class]) > div > div div.x1ned7t2.x78zum5 div.x1caxmr6",
+        ).length ||
+        $(
+          "body > div div:not([hidden]) section:visible > div div[style]:not([class]) > div",
+        ).find("div div.x1ned7t2.x78zum5 div.x1caxmr6").length;
+      let target = 0;
+
+      updateLoadingBar(true);
+
+      if (state.GL_dataCache.highlights[highlightId]) {
+        logger("Fetch from memory cache:", highlightId);
+
+        let totIndex =
+          state.GL_dataCache.highlights[highlightId].data.reels_media[0].items
+            .length;
+        username =
+          state.GL_dataCache.highlights[highlightId].data.reels_media[0].owner
+            .username;
+        target =
+          state.GL_dataCache.highlights[highlightId].data.reels_media[0].items[
+            totIndex - nowIndex
+          ];
+      } else {
+        let highStories = await getHighlightStories(highlightId);
+        let totIndex = highStories.data.reels_media[0].items.length;
+        username = highStories.data.reels_media[0].owner.username;
+        target = highStories.data.reels_media[0].items[totIndex - nowIndex];
+
+        state.GL_dataCache.highlights[highlightId] = highStories;
+      }
+
+      logger(
+        "onHighlightsStory",
+        highlightId,
+        state.GL_dataCache.highlights[highlightId],
+      );
+
+      if (USER_SETTING.RENAME_PUBLISH_DATE) {
+        timestamp = target.taken_at_timestamp;
+      }
+
+      if (USER_SETTING.CAPTURE_IMAGE_VIA_MEDIA_CACHE) {
+        const cached = getImageFromCache(target.id);
+        if (
+          cached &&
+          !state.GL_dataCache.highlights[highlightId].data.reels_media[0].items
+            .filter((item) => item.id === target.id)
+            .at(0).is_video
+        ) {
+          logger("[Restore Cached onHighlight]", target.id);
+          if (isPreview) {
+            openNewTab(cached);
+          } else {
+            saveFiles(cached, {
+              username,
+              sourceType: "highlights",
+              timestamp,
+              filetype: "jpg",
+              shortcode: target.id,
+            });
+          }
+          return;
+        }
+      }
+
+      if (USER_SETTING.FORCE_RESOURCE_VIA_MEDIA && !state.tempFetchRateLimit) {
+        let result = await getMediaInfo(target.id);
+
+        if (result.status === "ok") {
+          if (result.items[0].video_versions) {
+            const handled = await tryHandleDashFromMediaItem({
+              mediaItem: result.items[0],
+              username,
+              sourceType: "highlights",
+              timestamp,
+              shortcode: result.items[0].id,
+              isPreview,
+            });
+            if (handled) return;
+
+            if (isPreview) {
+              openNewTab(result.items[0].video_versions[0].url);
+            } else {
+              saveFiles(result.items[0].video_versions[0].url, {
+                username,
+                sourceType: "highlights",
+                timestamp,
+                filetype: "mp4",
+                shortcode: result.items[0].id,
+              });
+            }
+          } else {
+            if (isPreview) {
+              openNewTab(result.items[0].image_versions2.candidates[0].url);
+            } else {
+              saveFiles(result.items[0].image_versions2.candidates[0].url, {
+                username,
+                sourceType: "highlights",
+                timestamp,
+                filetype: "jpg",
+                shortcode: result.items[0].id,
+              });
+            }
+          }
+        } else {
+          if (USER_SETTING.FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED) {
+            delete state.GL_dataCache.highlights[highlightId];
+            state.tempFetchRateLimit = true;
+
+            onHighlightsStory(true, isPreview);
+          } else {
+            alert(
+              "Fetch failed from Media API. API response message: " +
+                result.message,
+            );
+          }
+
+          logger(result);
+        }
+      } else {
+        if (target.is_video) {
+          if (isPreview) {
+            openNewTab(target.video_resources.at(-1).src, username);
+          } else {
+            saveFiles(target.video_resources.at(-1).src, {
+              username,
+              sourceType: "highlights",
+              timestamp,
+              filetype: "mp4",
+              shortcode: target.id,
+            });
+          }
+        } else {
+          if (isPreview) {
+            openNewTab(target.display_resources.at(-1).src, username);
+          } else {
+            saveFiles(target.display_resources.at(-1).src, {
+              username,
+              sourceType: "highlights",
+              timestamp,
+              filetype: "jpg",
+              shortcode: target.id,
+            });
+          }
+        }
+
+        state.tempFetchRateLimit = false;
+      }
+
+      updateLoadingBar(false);
+    } else {
+      // Add the stories download button
+      if (!$(".IG_DWHISTORY").length) {
+        let $element = null;
+
+        // Default detecter (section layout mode)
+        if ($("body > div section._ac0a").length > 0) {
+          $element = $("body > div section:visible._ac0a");
+        } else {
+          $element = $(
+            "body > div section:visible > div > div[style]:not([class])",
+          );
+          $element.css("position", "relative");
+        }
+
+        // Detecter for div layout mode
+        if ($element.length === 0) {
+          let $$element = $(
+            "body > div div:not([hidden]) section:visible > div div[class][style] > div[style]:not([class])",
+          );
+          let nowSize = 0;
+
+          $$element.each(function () {
+            if ($(this).width() > nowSize) {
+              nowSize = $(this).width();
+              $element = $(this).children("div").first();
+            }
+          });
+        }
+
+        if ($element != null) {
+          //$element.css('position','relative');
+          $element.append(
+            `<div data-ih-locale-title="DW" title="${_i18n("DW")}" class="IG_DWHISTORY">${SVG.DOWNLOAD}</div>`,
+          );
+          $element.append(
+            `<div data-ih-locale-title="NEW_TAB" title="${_i18n("NEW_TAB")}" class="IG_DWHINEWTAB">${SVG.NEW_TAB}</div>`,
+          );
+
+          let $header = getStoryProgress(username);
+          if ($header.length > 1) {
+            $element.append(
+              `<div data-ih-locale-title="DW_ALL" title="${_i18n("DW_ALL")}" class="IG_DWHISTORY_ALL">${SVG.DOWNLOAD_ALL}</div>`,
+            );
+          }
+
+          setStoryProgressIndexText($element, $header, "IG_DWHISTORY_POSITION");
+
+          // replace something times ago format to publish time in first init
+          setTimeElementDateAndLocaleTime(
+            getHighlightCurrentTimeElement($header),
+          );
+
+          //// Modify video volume
+          //if(USER_SETTING.MODIFY_VIDEO_VOLUME){
+          //    $element.find('video').each(function(){
+          //        $(this).on('play playing', function(){
+          //            if(!$(this).data('modify')){
+          //                $(this).attr('data-modify', true);
+          //                this.volume = VIDEO_VOLUME;
+          //                logger('(highlight) Added video event listener #modify');
+          //            }
+          //        });
+          //    });
+          //}
+
+          // Make sure to first remove thumbnail button if still exists and highlight is a picture
+          $element.find("img[referrerpolicy]").each(function () {
+            $(this).on("load", function () {
+              if (!$(this).data("remove-thumbnail")) {
+                if ($element.find(".IG_DWHISTORY_THUMBNAIL").length === 0) {
+                  $(this).attr("data-remove-thumbnail", true);
+                  $(".IG_DWHISTORY_THUMBNAIL").remove();
+                  logger("(highlight) Manually removing thumbnail button");
+                } else {
+                  $(this).attr("data-remove-thumbnail", true);
+                  logger(
+                    "(highlight) Thumbnail button is not present for this picture",
+                  );
+                }
+              }
+            });
+          });
+
+          // Try to use event listener 'timeupdate' in order to detect if highlight is a video
+          //$element.find('video').each(function(){
+          //    $(this).on('timeupdate',function(){
+          //        if(!$(this).data('modify-thumbnail')){
+          //            if($element.find('.IG_DWHISTORY_THUMBNAIL').length === 0){
+          //                $(this).attr('data-modify-thumbnail', true);
+          //                onHighlightsStoryThumbnail(false);
+          //                logger('(highlight) Manually inserting thumbnail button');
+          //            }
+          //            else{
+          //                $(this).attr('data-modify-thumbnail', true);
+          //                logger('(highlight) Thumbnail button already inserted');
+          //            }
+          //        }
+          //    });
+          //});
+        }
+      }
+    }
+  }
+
+  /**
+   * onHighlightsStoryThumbnail
+   * @description Trigger user's highlight video thumbnail download event or button display event.
+   *
+   * @param  {Boolean}  isDownload - Check if it is a download operation
+   * @return {void}
+   */
+  async function onHighlightsStoryThumbnail(isDownload) {
+    if (isDownload) {
+      let date = new Date().getTime();
+      let timestamp = Math.floor(date / 1000);
+      let highlightId = location.href.replace(/\/$/gi, "").split("/").at(-1);
+      let username = "";
+      let nowIndex =
+        $("body > div section._ac0a header._ac0k > ._ac3r ._ac3n ._ac3p[style]")
+          .length ||
+        $(
+          "body > div section:visible > div > div:not([class]) > div > div div.x1ned7t2.x78zum5 div.x1caxmr6",
+        ).length ||
+        $(
+          "body > div div:not([hidden]) section:visible > div div[style]:not([class]) > div",
+        ).find("div div.x1ned7t2.x78zum5 div.x1caxmr6").length;
+      let target = "";
+
+      updateLoadingBar(true);
+
+      if (state.GL_dataCache.highlights[highlightId]) {
+        logger("Fetch from memory cache:", highlightId);
+
+        let totIndex =
+          state.GL_dataCache.highlights[highlightId].data.reels_media[0].items
+            .length;
+        username =
+          state.GL_dataCache.highlights[highlightId].data.reels_media[0].owner
+            .username;
+        target =
+          state.GL_dataCache.highlights[highlightId].data.reels_media[0].items[
+            totIndex - nowIndex
+          ];
+      } else {
+        let highStories = await getHighlightStories(highlightId);
+        let totIndex = highStories.data.reels_media[0].items.length;
+        username = highStories.data.reels_media[0].owner.username;
+        target = highStories.data.reels_media[0].items[totIndex - nowIndex];
+
+        state.GL_dataCache.highlights[highlightId] = highStories;
+      }
+
+      if (USER_SETTING.RENAME_PUBLISH_DATE) {
+        timestamp = target.taken_at_timestamp;
+      }
+
+      if (USER_SETTING.CAPTURE_IMAGE_VIA_MEDIA_CACHE) {
+        const cached = getImageFromCache(target.id);
+        if (cached) {
+          logger("[Restore Cached onHighlightsStoryThumbnail]", target.id);
+          saveFiles(cached, {
+            username,
+            sourceType: "highlights",
+            timestamp,
+            filetype: "jpg",
+            shortcode: target.id,
+          });
+          return;
+        }
+      }
+
+      if (USER_SETTING.FORCE_RESOURCE_VIA_MEDIA && !state.tempFetchRateLimit) {
+        let result = await getMediaInfo(target.id);
+
+        if (result.status === "ok") {
+          saveFiles(result.items[0].image_versions2.candidates[0].url, {
+            username,
+            sourceType: "highlights",
+            timestamp,
+            filetype: "jpg",
+            shortcode: highlightId,
+          });
+        } else {
+          if (USER_SETTING.FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED) {
+            delete state.GL_dataCache.highlights[highlightId];
+            state.tempFetchRateLimit = true;
+
+            onHighlightsStoryThumbnail(true);
+          } else {
+            alert(
+              "Fetch failed from Media API. API response message: " +
+                result.message,
+            );
+          }
+
+          logger(result);
+        }
+      } else {
+        saveFiles(target.display_resources.at(-1).src, {
+          username,
+          sourceType: "highlights",
+          timestamp,
+          filetype: "jpg",
+          shortcode: highlightId,
+        });
+        state.tempFetchRateLimit = false;
+      }
+
+      updateLoadingBar(false);
+    } else {
+      setStoryProgressIndexByUsername(
+        $(".IG_DWHISTORY").parent(),
+        getHighlightsStoryUsername(),
+        "IG_DWHISTORY_POSITION",
+      );
+
+      if ($("body > div section video.xh8yej3").length) {
+        // Add the stories thumbnail download button
+        if (!$(".IG_DWHISTORY_THUMBNAIL").length) {
+          let $element = null;
+
+          // Default detecter (section layout mode)
+          if ($("body > div section._ac0a").length > 0) {
+            $element = $("body > div section:visible._ac0a");
+          } else {
+            $element = $(
+              "body > div section:visible > div > div[style]:not([class])",
+            );
+            $element.css("position", "relative");
+          }
+
+          // Detecter for div layout mode
+          if ($element.length === 0) {
+            let $$element = $(
+              "body > div div:not([hidden]) section:visible > div div[class][style] > div[style]:not([class])",
+            );
+            let nowSize = 0;
+
+            $$element.each(function () {
+              if ($(this).width() > nowSize) {
+                nowSize = $(this).width();
+                $element = $(this).children("div").first();
+              }
+            });
+          }
+
+          if ($element != null) {
+            $element.append(
+              `<div data-ih-locale-title="VIDEO_THUMBNAIL" title="${_i18n("VIDEO_THUMBNAIL")}" class="IG_DWHISTORY_THUMBNAIL">${SVG.THUMBNAIL}</div>`,
+            );
+          }
+        }
+      } else {
+        $(".IG_DWHISTORY_THUMBNAIL").remove();
+      }
+    }
+  }
+
+  /**
+   * onReadyMyDW
+   * @description Create an event entry point for the download button for the post.
+   *
+   * @param  {Boolean}  NoDialog    - Check if it not showing the dialog
+   * @param  {?Boolean}  hasReferrer - Check if the source of the previous page is a story page
+   * @return {void}
+   */
+  function onReadyMyDW(NoDialog, hasReferrer) {
+    if (hasReferrer === true) {
+      logger("hasReferrer", "regenerated");
+      $('article[data-snig="canDownload"], div[data-snig="canDownload"]')
+        .filter(function () {
+          return $(this).find(".IG_DW_MAIN").length === 0;
+        })
+        .removeAttr("data-snig");
+    }
+
+    // Whether is Instagram dialog?
+    if (NoDialog == false) {
+      const maxCall = 100;
+      let i = 0;
+      var repeat = setInterval(() => {
+        // section:visible > main > div > div[data-snig="canDownload"] > div > div > div > hr << (single foreground post in page, non-floating // <hr> element here is literally the line beneath poster's username) >>
+        // section:visible > main > div > div.xdt5ytf[data-snig="canDownload"] << (former CSS selector for single foreground post in page, non-floating) >>
+        // <hr> is much more unique element than "div.xdt5ytf"
+        if (
+          i > maxCall ||
+          $(
+            'article[data-snig="canDownload"], section:visible > main > div > div[data-snig="canDownload"] > div > div > div > hr, div[id^="mount"] > div > div > div.x1n2onr6.x1vjfegm div[data-snig="canDownload"]',
+          ).length > 0
+        ) {
+          clearInterval(repeat);
+
+          if (i > maxCall) {
+            //alert('Trying to call button creation method reached to maximum try times. If you want to re-register method, please open script menu and press "Reload Script" button or hotkey "R" to reload main timer.');
+            console.warn(
+              "onReadyMyDW() Timer",
+              "maximum number of repetitions reached, terminated",
+            );
+          }
+        }
+
+        logger(
+          "onReadyMyDW() Timer",
+          "repeating to call detection createDownloadButton()",
+        );
+        createDownloadButton();
+        i++;
+      }, buttonDetectionInterval);
+    } else {
+      createDownloadButton();
+    }
+  }
+
+  /**
+   * initHTML5VideoControls
+   * @description Keep native browser controls usable across Instagram's React
+   *              remounts and media overlays.
+   *
+   * @return {void}
+   */
+  function initHTML5VideoControls() {
+    const manager = state.GL_nativeControls;
+    if (manager.initialized) return;
+
+    manager.initialized = true;
+    manager.mutationObserver = new MutationObserver(function (mutations) {
+      let shouldRefresh = false;
+      let shouldPrune = false;
+
+      mutations.forEach(function (mutation) {
+        mutation.addedNodes.forEach(function (node) {
+          if (node.nodeType !== Node.ELEMENT_NODE) return;
+          scanHTML5VideoControls(node);
+          shouldRefresh = true;
+        });
+
+        if (mutation.removedNodes.length > 0) {
+          shouldPrune = true;
+          shouldRefresh = true;
+        }
+      });
+
+      if (shouldPrune) {
+        queueMicrotask(pruneDisconnectedHTML5VideoControls);
+      }
+      if (shouldRefresh) {
+        queueHTML5VideoControlsRefresh();
+      }
+    });
+    manager.mutationObserver.observe(document, {
+      childList: true,
+      subtree: true,
+    });
+
+    document.addEventListener(
+      "contextmenu",
+      handleHTML5VideoControlsContextMenu,
+      true,
+    );
+    window.addEventListener("resize", queueHTML5VideoControlsRefresh);
+    document.addEventListener("fullscreenchange", function () {
+      queueHTML5VideoControlsRefresh();
+      state.GL_nativeControls.videos.forEach(function (video) {
+        const record = state.GL_nativeControls.records.get(video);
+        if (record?.active) reassertHTML5VideoControls(video, record);
+      });
+    });
+
+    scanHTML5VideoControls(document);
+  }
+
+  /**
+   * @param {Node|Document} root
+   * @return {void}
+   */
+  function scanHTML5VideoControls(root) {
+    if (!USER_SETTING.HTML5_VIDEO_CONTROL || !root) return;
+
+    const videos = [];
+    if (root instanceof HTMLVideoElement) videos.push(root);
+    if (typeof root.querySelectorAll === "function") {
+      root.querySelectorAll("video").forEach((video) => videos.push(video));
+    }
+
+    registerHTML5VideoControls(videos);
+  }
+
+  /**
+   * @param {HTMLVideoElement|JQuery|Iterable<HTMLVideoElement>} source
+   * @return {void}
+   */
+  function registerHTML5VideoControls(source) {
+    let videos = [];
+
+    if (source instanceof HTMLVideoElement) {
+      videos = [source];
+    } else if (source?.jquery) {
+      videos = source.toArray();
+    } else if (source && typeof source[Symbol.iterator] === "function") {
+      videos = Array.from(source);
+    }
+
+    videos
+      .filter((video) => video instanceof HTMLVideoElement)
+      .forEach(function (video) {
+        const record = getHTML5VideoControlRecord(video);
+        if (
+          USER_SETTING.HTML5_VIDEO_CONTROL &&
+          !record.userDisabled &&
+          video.isConnected
+        ) {
+          activateHTML5VideoControls(video, record);
+        }
+      });
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @return {Object}
+   */
+  function getHTML5VideoControlRecord(video) {
+    const manager = state.GL_nativeControls;
+    let record = manager.records.get(video);
+    if (record) return record;
+
+    const stopInstagramEvent = function (event) {
+      if (!record.active) return;
+
+      if (
+        event.type === "pointerdown" ||
+        event.type === "mousedown" ||
+        event.type === "touchstart"
+      ) {
+        record.pointerAudioState = {
+          ...readHTML5VideoAudioState(video),
+          capturedAt: performance.now(),
+        };
+      }
+
+      event.stopPropagation();
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+    };
+    const stopDrag = function (event) {
+      if (!record.active) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+    };
+    const refresh = function () {
+      if (!record.active) return;
+      reassertHTML5VideoControls(video, record);
+      scheduleHTML5VideoBlockerRefresh(video);
+    };
+    const beginSeek = function () {
+      if (!record.active) return;
+
+      const now = performance.now();
+      const pointerState = record.pointerAudioState;
+      const baseline =
+        pointerState &&
+        now - pointerState.capturedAt <= 1000 &&
+        pointerState.capturedAt >= record.audioStateUpdatedAt
+          ? pointerState
+          : record.audioState || readHTML5VideoAudioState(video);
+
+      record.seekAudioState = {
+        muted: Boolean(baseline.muted),
+        volume: normalizeHTML5VideoVolume(baseline.volume, video.volume),
+      };
+      record.seekAudioExpiresAt = now + 2200;
+
+      if (record.seekAudioTimer != null) clearTimeout(record.seekAudioTimer);
+      record.seekAudioTimer = setTimeout(function () {
+        record.seekAudioTimer = null;
+        if (performance.now() >= record.seekAudioExpiresAt) {
+          record.seekAudioState = null;
+        }
+      }, 2300);
+    };
+    const finishSeek = function () {
+      if (!record.active || !record.seekAudioState) return;
+
+      restoreHTML5VideoAudioState(video, record, record.seekAudioState);
+      if (record.seekAudioTimer != null) clearTimeout(record.seekAudioTimer);
+      record.seekAudioTimer = setTimeout(function () {
+        record.seekAudioTimer = null;
+        record.seekAudioState = null;
+      }, 300);
+    };
+    const handleVolumeChange = function () {
+      if (!record.active || record.restoringAudio) return;
+
+      const guardedAudioState = getGuardedHTML5VideoAudioState(record);
+      if (guardedAudioState) {
+        const volumeChanged =
+          Math.abs(video.volume - guardedAudioState.volume) > 0.001;
+        if (video.muted !== guardedAudioState.muted || volumeChanged) {
+          queueMicrotask(function () {
+            const currentGuard = getGuardedHTML5VideoAudioState(record);
+            if (record.active && currentGuard) {
+              restoreHTML5VideoAudioState(video, record, currentGuard);
+            }
+          });
+        }
+        return;
+      }
+
+      record.audioState = readHTML5VideoAudioState(video);
+      record.audioStateUpdatedAt = performance.now();
+      if (!video.muted && Number.isFinite(video.volume)) {
+        state.videoVolume = video.volume;
+        GM_setValue("G_VIDEO_VOLUME", video.volume);
+      }
+    };
+
+    record = {
+      active: false,
+      attributeObserver: null,
+      audioState: readHTML5VideoAudioState(video),
+      audioStateUpdatedAt: performance.now(),
+      blockers: new Set(),
+      changedPosition: false,
+      handoffAudioExpiresAt: 0,
+      handoffAudioState: null,
+      handoffAudioTimer: null,
+      originalControls: video.controls,
+      originalControlsAttribute: video.getAttribute("controls"),
+      originalDraggableAttribute: video.getAttribute("draggable"),
+      originalPositionPriority: video.style.getPropertyPriority("position"),
+      originalPositionValue: video.style.getPropertyValue("position"),
+      pointerAudioState: null,
+      refreshTimer: null,
+      resizeObserver: null,
+      restoringAudio: false,
+      seekAudioExpiresAt: 0,
+      seekAudioState: null,
+      seekAudioTimer: null,
+      userDisabled: false,
+      listeners: {
+        beginSeek,
+        finishSeek,
+        handleVolumeChange,
+        refresh,
+        stopDrag,
+        stopInstagramEvent,
+      },
+    };
+
+    manager.records.set(video, record);
+    manager.videos.add(video);
+
+    [
+      "click",
+      "dblclick",
+      "mousedown",
+      "mouseup",
+      "pointerdown",
+      "pointerup",
+      "touchstart",
+      "touchend",
+    ].forEach(function (eventName) {
+      video.addEventListener(eventName, stopInstagramEvent);
+    });
+    video.addEventListener("dragstart", stopDrag);
+    video.addEventListener("loadedmetadata", refresh);
+    video.addEventListener("loadeddata", refresh);
+    video.addEventListener("durationchange", refresh);
+    video.addEventListener("play", refresh);
+    video.addEventListener("mouseenter", refresh);
+    video.addEventListener("seeking", beginSeek);
+    video.addEventListener("seeked", finishSeek);
+    video.addEventListener("volumechange", handleVolumeChange);
+
+    record.attributeObserver = new MutationObserver(function () {
+      if (!record.active || !USER_SETTING.HTML5_VIDEO_CONTROL) return;
+      queueMicrotask(function () {
+        if (record.active) reassertHTML5VideoControls(video, record);
+      });
+    });
+    record.attributeObserver.observe(video, {
+      attributes: true,
+      attributeFilter: ["class", "controls"],
+    });
+
+    if (typeof ResizeObserver === "function") {
+      record.resizeObserver = new ResizeObserver(function () {
+        scheduleHTML5VideoBlockerRefresh(video);
+      });
+      record.resizeObserver.observe(video);
+    }
+
+    return record;
+  }
+
+  /**
+   * @param {Number} value
+   * @param {Number} fallback
+   * @return {Number}
+   */
+  function normalizeHTML5VideoVolume(value, fallback = 1) {
+    const number = Number(value);
+    if (Number.isFinite(number) && number >= 0 && number <= 1) return number;
+
+    const fallbackNumber = Number(fallback);
+    return Number.isFinite(fallbackNumber) && fallbackNumber >= 0 && fallbackNumber <= 1
+      ? fallbackNumber
+      : 1;
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @return {{muted: Boolean, volume: Number}}
+   */
+  function readHTML5VideoAudioState(video) {
+    return {
+      muted: Boolean(video.muted),
+      volume: normalizeHTML5VideoVolume(video.volume, 1),
+    };
+  }
+
+  /**
+   * @param {Object} record
+   * @return {?{muted: Boolean, volume: Number}}
+   */
+  function getGuardedHTML5VideoAudioState(record) {
+    const now = performance.now();
+
+    if (record.seekAudioState) {
+      if (now <= record.seekAudioExpiresAt) return record.seekAudioState;
+      record.seekAudioState = null;
+    }
+
+    if (record.handoffAudioState) {
+      if (now <= record.handoffAudioExpiresAt) return record.handoffAudioState;
+      record.handoffAudioState = null;
+    }
+
+    return null;
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @return {?{muted: Boolean, volume: Number}}
+   */
+  function beginHTML5VideoAudioHandoff(video) {
+    const record = state.GL_nativeControls.records.get(video);
+    if (!record?.active) return null;
+
+    const source =
+      getGuardedHTML5VideoAudioState(record) ||
+      record.audioState ||
+      readHTML5VideoAudioState(video);
+    const preserved = {
+      muted: Boolean(source.muted),
+      volume: normalizeHTML5VideoVolume(source.volume, video.volume),
+    };
+
+    record.handoffAudioState = preserved;
+    record.handoffAudioExpiresAt = performance.now() + 7000;
+    if (record.handoffAudioTimer != null) clearTimeout(record.handoffAudioTimer);
+    record.handoffAudioTimer = setTimeout(function () {
+      record.handoffAudioTimer = null;
+      if (performance.now() >= record.handoffAudioExpiresAt) {
+        record.handoffAudioState = null;
+      }
+    }, 7100);
+
+    return preserved;
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @param {Number} delay
+   * @return {void}
+   */
+  function clearHTML5VideoAudioHandoff(video, delay = 0) {
+    const record = state.GL_nativeControls.records.get(video);
+    if (!record) return;
+
+    if (record.handoffAudioTimer != null) {
+      clearTimeout(record.handoffAudioTimer);
+      record.handoffAudioTimer = null;
+    }
+
+    const clear = function () {
+      record.handoffAudioState = null;
+      record.handoffAudioExpiresAt = 0;
+    };
+    if (delay > 0) {
+      record.handoffAudioTimer = setTimeout(function () {
+        record.handoffAudioTimer = null;
+        clear();
+      }, delay);
+    } else {
+      clear();
+    }
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @param {?Object} fallback
+   * @return {?{muted: Boolean, volume: Number}}
+   */
+  function getPreservedHTML5VideoAudioState(video, fallback = null) {
+    const record = state.GL_nativeControls.records.get(video);
+    if (!record?.active) return fallback;
+
+    const source =
+      getGuardedHTML5VideoAudioState(record) ||
+      record.audioState ||
+      readHTML5VideoAudioState(video);
+    return {
+      muted: Boolean(source.muted),
+      volume: normalizeHTML5VideoVolume(source.volume, video.volume),
+    };
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @param {Object} record
+   * @param {Object} audioState
+   * @return {void}
+   */
+  function restoreHTML5VideoAudioState(video, record, audioState) {
+    if (!record?.active || !audioState || record.restoringAudio) return;
+
+    const desired = {
+      muted: Boolean(audioState.muted),
+      volume: normalizeHTML5VideoVolume(audioState.volume, video.volume),
+    };
+
+    record.restoringAudio = true;
+    try {
+      if (Math.abs(video.volume - desired.volume) > 0.001) {
+        video.volume = desired.volume;
+      }
+      if (video.muted !== desired.muted) {
+        video.muted = desired.muted;
+      }
+      record.audioState = desired;
+      record.audioStateUpdatedAt = performance.now();
+    } finally {
+      record.restoringAudio = false;
+    }
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @param {Object} record
+   * @return {void}
+   */
+  function activateHTML5VideoControls(video, record) {
+    if (!USER_SETTING.HTML5_VIDEO_CONTROL || !video.isConnected) return;
+
+    record.active = true;
+    record.userDisabled = false;
+
+    if (
+      !record.changedPosition &&
+      window.getComputedStyle(video).position === "static"
+    ) {
+      record.changedPosition = true;
+      video.style.setProperty("position", "relative", "important");
+    }
+
+    reassertHTML5VideoControls(video, record);
+    record.audioState = readHTML5VideoAudioState(video);
+    record.audioStateUpdatedAt = performance.now();
+    scheduleHTML5VideoBlockerRefresh(video);
+    setTimeout(function () {
+      if (record.active) scheduleHTML5VideoBlockerRefresh(video);
+    }, 150);
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @param {Object} record
+   * @return {void}
+   */
+  function reassertHTML5VideoControls(video, record) {
+    if (
+      !record.active ||
+      !USER_SETTING.HTML5_VIDEO_CONTROL ||
+      !video.isConnected
+    ) {
+      return;
+    }
+
+    if (!video.classList.contains("insta-controls-native-controls")) {
+      video.classList.add("insta-controls-native-controls");
+    }
+    if (video.getAttribute("data-insta-controls-native-controls") !== "true") {
+      video.setAttribute("data-insta-controls-native-controls", "true");
+    }
+    if (!video.hasAttribute("controls")) {
+      video.setAttribute("controls", "");
+    }
+    if (!video.controls) {
+      video.controls = true;
+    }
+    if (video.getAttribute("draggable") !== "false") {
+      video.setAttribute("draggable", "false");
+    }
+
+    const desiredVolume = Number(state.videoVolume);
+    if (
+      USER_SETTING.MODIFY_VIDEO_VOLUME &&
+      Number.isFinite(desiredVolume) &&
+      desiredVolume >= 0 &&
+      desiredVolume <= 1 &&
+      video.volume !== desiredVolume
+    ) {
+      video.volume = desiredVolume;
+    }
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @param {Boolean} userDisabled
+   * @return {void}
+   */
+  function deactivateHTML5VideoControls(video, userDisabled = false) {
+    const manager = state.GL_nativeControls;
+    const record = manager.records.get(video);
+    if (!record) return;
+
+    record.active = false;
+    record.userDisabled = userDisabled;
+    if (record.refreshTimer != null) {
+      clearTimeout(record.refreshTimer);
+      record.refreshTimer = null;
+    }
+    if (record.seekAudioTimer != null) {
+      clearTimeout(record.seekAudioTimer);
+      record.seekAudioTimer = null;
+    }
+    clearHTML5VideoAudioHandoff(video);
+    record.audioState = readHTML5VideoAudioState(video);
+    record.audioStateUpdatedAt = performance.now();
+    record.pointerAudioState = null;
+    record.seekAudioState = null;
+    record.seekAudioExpiresAt = 0;
+
+    releaseHTML5VideoBlockers(video, record);
+    video.classList.remove("insta-controls-native-controls");
+    video.removeAttribute("data-insta-controls-native-controls");
+
+    if (record.originalControlsAttribute == null) {
+      video.removeAttribute("controls");
+      video.controls = Boolean(record.originalControls);
+    } else {
+      video.setAttribute("controls", record.originalControlsAttribute);
+      video.controls = true;
+    }
+
+    if (record.originalDraggableAttribute == null) {
+      video.removeAttribute("draggable");
+    } else {
+      video.setAttribute("draggable", record.originalDraggableAttribute);
+    }
+
+    if (record.changedPosition) {
+      if (record.originalPositionValue) {
+        video.style.setProperty(
+          "position",
+          record.originalPositionValue,
+          record.originalPositionPriority,
+        );
+      } else {
+        video.style.removeProperty("position");
+      }
+      record.changedPosition = false;
+    }
+  }
+
+  /**
+   * @param {Boolean} enabled
+   * @return {void}
+   */
+  function setHTML5VideoControlsEnabled(enabled) {
+    const manager = state.GL_nativeControls;
+
+    if (enabled) {
+      $(".volume_slider").remove();
+      document.querySelectorAll("video").forEach(function (video) {
+        const record = getHTML5VideoControlRecord(video);
+        record.userDisabled = false;
+        activateHTML5VideoControls(video, record);
+      });
+    } else {
+      Array.from(manager.videos).forEach(function (video) {
+        deactivateHTML5VideoControls(video, false);
+      });
+    }
+  }
+
+  /**
+   * @param {MouseEvent} event
+   * @return {void}
+   */
+  function handleHTML5VideoControlsContextMenu(event) {
+    if (!USER_SETTING.HTML5_VIDEO_CONTROL) return;
+    if (
+      event.target?.closest?.(
+        ".button_wrapper, .IG_REELS_CONTROLS, .volume_slider, .IG_POPUP_DIG, #imageViewer",
+      )
+    ) {
+      return;
+    }
+
+    const video = findHTML5VideoAtPoint(event.clientX, event.clientY, event);
+    if (!video) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+
+    const record = getHTML5VideoControlRecord(video);
+    if (record.active) {
+      deactivateHTML5VideoControls(video, true);
+    } else {
+      record.userDisabled = false;
+      activateHTML5VideoControls(video, record);
+    }
+  }
+
+  /**
+   * @param {Number} clientX
+   * @param {Number} clientY
+   * @param {Event} event
+   * @return {HTMLVideoElement|null}
+   */
+  function findHTML5VideoAtPoint(clientX, clientY, event) {
+    const pathVideo = event
+      ?.composedPath?.()
+      ?.find((element) => element instanceof HTMLVideoElement);
+    if (pathVideo) return pathVideo;
+
+    const candidates = [];
+    document.querySelectorAll("video").forEach(function (video) {
+      const rect = video.getBoundingClientRect();
+      if (
+        rect.width < 32 ||
+        rect.height < 32 ||
+        clientX < rect.left ||
+        clientX > rect.right ||
+        clientY < rect.top ||
+        clientY > rect.bottom
+      ) {
+        return;
+      }
+
+      const style = window.getComputedStyle(video);
+      if (
+        style.display === "none" ||
+        style.visibility === "hidden" ||
+        Number(style.opacity) <= 0.01
+      ) {
+        return;
+      }
+
+      candidates.push({
+        area: rect.width * rect.height,
+        video,
+      });
+    });
+
+    candidates.sort(function (a, b) {
+      const aActive = state.GL_nativeControls.records.get(a.video)?.active ? 1 : 0;
+      const bActive = state.GL_nativeControls.records.get(b.video)?.active ? 1 : 0;
+      return bActive - aActive || a.area - b.area;
+    });
+
+    return candidates[0]?.video || null;
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @return {void}
+   */
+  function scheduleHTML5VideoBlockerRefresh(video) {
+    const record = state.GL_nativeControls.records.get(video);
+    if (!record?.active || record.refreshTimer != null) return;
+
+    record.refreshTimer = setTimeout(function () {
+      record.refreshTimer = null;
+      if (record.active) refreshHTML5VideoBlockers(video, record);
+    }, 0);
+  }
+
+  /** @return {void} */
+  function queueHTML5VideoControlsRefresh() {
+    const manager = state.GL_nativeControls;
+    if (manager.refreshFrame != null) return;
+
+    manager.refreshFrame = requestAnimationFrame(function () {
+      manager.refreshFrame = null;
+      manager.videos.forEach(function (video) {
+        const record = manager.records.get(video);
+        if (record?.active && video.isConnected) {
+          reassertHTML5VideoControls(video, record);
+          refreshHTML5VideoBlockers(video, record);
+        }
+      });
+    });
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @param {Object} record
+   * @return {void}
+   */
+  function refreshHTML5VideoBlockers(video, record) {
+    if (!record.active || !video.isConnected) return;
+
+    releaseHTML5VideoBlockers(video, record);
+    collectHTML5VideoBlockers(video).forEach(function (element) {
+      claimHTML5VideoBlocker(video, record, element);
+    });
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @return {Set<Element>}
+   */
+  function collectHTML5VideoBlockers(video) {
+    const blockers = new Set();
+    const videoRect = video.getBoundingClientRect();
+    const videoArea = videoRect.width * videoRect.height;
+    if (videoArea <= 0) return blockers;
+
+    const excludedSelector =
+      ".button_wrapper, .IG_REELS_CONTROLS, .volume_slider, .IG_POPUP_DIG, #imageViewer";
+    const shouldIgnore = function (element) {
+      return (
+        !(element instanceof Element) ||
+        element === video ||
+        element.contains(video) ||
+        video.contains(element) ||
+        element.closest(excludedSelector) != null
+      );
+    };
+    const addCandidate = function (element) {
+      let current = element;
+      for (let depth = 0; current && depth < 6; depth++) {
+        if (current === video || current.contains(video)) return;
+        if (
+          !shouldIgnore(current) &&
+          isHTML5VideoBlockerCandidate(current, videoRect, videoArea)
+        ) {
+          blockers.add(current);
+          return;
+        }
+        current = current.parentElement;
+      }
+    };
+
+    let ancestor = video.parentElement;
+    for (let depth = 0; ancestor && depth < 5; depth++) {
+      Array.from(ancestor.children).forEach(function (child) {
+        if (
+          !shouldIgnore(child) &&
+          isHTML5VideoBlockerCandidate(child, videoRect, videoArea)
+        ) {
+          blockers.add(child);
+        }
+      });
+
+      const ancestorRect = ancestor.getBoundingClientRect();
+      if (
+        depth >= 1 &&
+        (ancestorRect.width > videoRect.width * 1.65 + 80 ||
+          ancestorRect.height > videoRect.height * 1.65 + 120)
+      ) {
+        break;
+      }
+      ancestor = ancestor.parentElement;
+    }
+
+    const insetX = Math.min(18, videoRect.width * 0.08);
+    const insetY = Math.min(18, videoRect.height * 0.08);
+    const points = [
+      [videoRect.left + videoRect.width * 0.5, videoRect.top + videoRect.height * 0.5],
+      [videoRect.left + insetX, videoRect.bottom - insetY],
+      [videoRect.left + videoRect.width * 0.5, videoRect.bottom - insetY],
+      [videoRect.right - insetX, videoRect.bottom - insetY],
+    ];
+
+    points.forEach(function ([x, y]) {
+      if (x < 0 || y < 0 || x > innerWidth || y > innerHeight) return;
+      const stack = document.elementsFromPoint(x, y);
+      const videoIndex = stack.indexOf(video);
+      const possibleBlockers = videoIndex >= 0 ? stack.slice(0, videoIndex) : stack;
+
+      possibleBlockers.slice(0, 10).forEach(addCandidate);
+    });
+
+    return blockers;
+  }
+
+  /**
+   * @param {Element} element
+   * @param {DOMRect} videoRect
+   * @param {Number} videoArea
+   * @return {Boolean}
+   */
+  function isHTML5VideoBlockerCandidate(element, videoRect, videoArea) {
+    const blockedTags = new Set([
+      "HTML",
+      "BODY",
+      "MAIN",
+      "SECTION",
+      "ARTICLE",
+      "NAV",
+      "ASIDE",
+      "HEADER",
+      "FOOTER",
+    ]);
+    if (blockedTags.has(element.tagName)) return false;
+    if (["dialog", "main", "navigation"].includes(element.getAttribute("role"))) {
+      return false;
+    }
+
+    const rect = element.getBoundingClientRect();
+    const elementArea = rect.width * rect.height;
+    if (rect.width < 24 || rect.height < 18 || elementArea <= 0) return false;
+
+    const style = window.getComputedStyle(element);
+    if (
+      style.display === "none" ||
+      style.visibility === "hidden" ||
+      Number(style.opacity) <= 0.01 ||
+      style.pointerEvents === "none"
+    ) {
+      return false;
+    }
+
+    const overlapWidth = Math.max(
+      0,
+      Math.min(videoRect.right, rect.right) - Math.max(videoRect.left, rect.left),
+    );
+    const overlapHeight = Math.max(
+      0,
+      Math.min(videoRect.bottom, rect.bottom) - Math.max(videoRect.top, rect.top),
+    );
+    const overlapArea = overlapWidth * overlapHeight;
+    if (overlapArea <= 0) return false;
+
+    const videoCoverage = overlapArea / videoArea;
+    const elementCoverage = overlapArea / elementArea;
+    const horizontalCoverage = overlapWidth / videoRect.width;
+    const allowedXOverflow = Math.max(20, videoRect.width * 0.08);
+    const allowedYOverflow = Math.max(20, videoRect.height * 0.08);
+    const fitsVideoBounds =
+      rect.left >= videoRect.left - allowedXOverflow &&
+      rect.right <= videoRect.right + allowedXOverflow &&
+      rect.top >= videoRect.top - allowedYOverflow &&
+      rect.bottom <= videoRect.bottom + allowedYOverflow;
+    if (!fitsVideoBounds || elementArea > videoArea * 1.35) return false;
+
+    const fullSurface = videoCoverage >= 0.5 && elementCoverage >= 0.68;
+    const bottomAligned =
+      Math.abs(rect.bottom - videoRect.bottom) <= allowedYOverflow;
+    const controlStrip =
+      horizontalCoverage >= 0.72 &&
+      elementCoverage >= 0.72 &&
+      bottomAligned &&
+      overlapHeight >= 24 &&
+      rect.height <= videoRect.height * 0.42 + 24;
+
+    return fullSurface || controlStrip;
+  }
+
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @param {Object} record
+   * @param {Element} element
+   * @return {void}
+   */
+  function claimHTML5VideoBlocker(video, record, element) {
+    const manager = state.GL_nativeControls;
+    let owners = manager.blockerOwners.get(element);
+    if (!owners) {
+      owners = new Set();
+      manager.blockerOwners.set(element, owners);
+    }
+
+    owners.add(video);
+    record.blockers.add(element);
+    element.classList.add("insta-controls-native-controls-blocker");
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @param {Object} record
+   * @return {void}
+   */
+  function releaseHTML5VideoBlockers(video, record) {
+    const manager = state.GL_nativeControls;
+    record.blockers.forEach(function (element) {
+      const owners = manager.blockerOwners.get(element);
+      owners?.delete(video);
+      if (!owners || owners.size === 0) {
+        element.classList.remove("insta-controls-native-controls-blocker");
+        manager.blockerOwners.delete(element);
+      }
+    });
+    record.blockers.clear();
+  }
+
+  /** @return {void} */
+  function pruneDisconnectedHTML5VideoControls() {
+    const manager = state.GL_nativeControls;
+    Array.from(manager.videos).forEach(function (video) {
+      if (video.isConnected) return;
+
+      const record = manager.records.get(video);
+      if (!record) {
+        manager.videos.delete(video);
+        return;
+      }
+
+      deactivateHTML5VideoControls(video, false);
+      record.attributeObserver?.disconnect();
+      record.resizeObserver?.disconnect();
+      [
+        "click",
+        "dblclick",
+        "mousedown",
+        "mouseup",
+        "pointerdown",
+        "pointerup",
+        "touchstart",
+        "touchend",
+      ].forEach(function (eventName) {
+        video.removeEventListener(eventName, record.listeners.stopInstagramEvent);
+      });
+      video.removeEventListener("dragstart", record.listeners.stopDrag);
+      video.removeEventListener("loadedmetadata", record.listeners.refresh);
+      video.removeEventListener("loadeddata", record.listeners.refresh);
+      video.removeEventListener("durationchange", record.listeners.refresh);
+      video.removeEventListener("play", record.listeners.refresh);
+      video.removeEventListener("mouseenter", record.listeners.refresh);
+      video.removeEventListener("seeking", record.listeners.beginSeek);
+      video.removeEventListener("seeked", record.listeners.finishSeek);
+      video.removeEventListener("volumechange", record.listeners.handleVolumeChange);
+      if (record.seekAudioTimer != null) clearTimeout(record.seekAudioTimer);
+      manager.records.delete(video);
+      manager.videos.delete(video);
+    });
+  }
+
+  /**
+   * initPostVideoFunction
+   * @description Initialize settings related to the video resources in the post.
+   *
+   * @param  {JQuery<HTMLElement>}  $mainElement
+   * @return {Void}
+   */
+  function initPostVideoFunction($mainElement) {
+    $mainElement.find("video").each(function () {
+      $(this)
+        .off("fullscreenchange.IG_videoControl")
+        .on("fullscreenchange.IG_videoControl", function () {
+          if (($(this).attr("style") || "").includes("object-fit")) {
+            if (document.fullscreenElement == this) {
+              $(this).css("object-fit", "contain");
+            } else {
+              $(this).css("object-fit", "cover");
+            }
+          }
+        });
+    });
+
+    // Disable video autoplay
+    if (USER_SETTING.DISABLE_VIDEO_LOOPING) {
+      $mainElement.find("video").each(function () {
+        $(this).on("ended", function () {
+          if (!$(this).data("loop")) {
+            $(this).attr("data-loop", true);
+            this.pause();
+            logger("(post) Added video event listener #loop");
+          }
+        });
+      });
+    }
+
+    // Modify video volume
+    if (USER_SETTING.MODIFY_VIDEO_VOLUME) {
+      $mainElement.find("video").each(function () {
+        $(this).on("play playing", function () {
+          if (!$(this).data("modify")) {
+            $(this).attr("data-modify", true);
+            this.volume = state.videoVolume;
+            logger("(post) Added video event listener #modify");
+          }
+        });
+      });
+    }
+
+    if (USER_SETTING.HTML5_VIDEO_CONTROL) {
+      registerHTML5VideoControls($mainElement.find("video"));
+    }
+
+    var $videos = $mainElement.find("video");
+    var $buttonParent = $mainElement.find("video + div > div").first();
+    if (USER_SETTING.HTML5_VIDEO_CONTROL) {
+      $buttonParent.find("div.volume_slider").remove();
+    } else {
+      toggleVolumeSilder($videos, $buttonParent, "post", "bottom");
+    }
+  }
+
+  /**
+   * createDownloadButton
+   * @description Create a download button in the upper right corner of each post.
+   *
+   * @return {void}
+   */
+  function createDownloadButton() {
+    // Add download icon per each posts
+    // eslint-disable-next-line no-unused-vars
+    $("article, section:visible > main > div > div > div > div > div > hr")
+      .map(function (index) {
+        return $(this).is(
+          "section:visible > main > div > div > div > div > div > hr",
+        )
+          ? $(this).parent().parent().parent().parent()[0]
+          : this;
+      })
+      .filter(function () {
+        return $(this).height() > 0 && $(this).width() > 0;
+      })
+      .each(function (index) {
+        // If it is have not download icon
+        // class x1iyjqo2 mean user profile pages post list container
+        if (
+          !$(this).attr("data-snig") &&
+          !$(this).hasClass("x1iyjqo2") &&
+          !$(this).children("article")?.hasClass("x1iyjqo2") &&
+          $(this).parents("div#scrollview").length === 0
+        ) {
+          logger("Found post container", $(this));
+
+          const $mainElement = $(this);
+          const tagName = this.tagName;
+          // Improve the selector by using the value from the getVisibleNodeIndex function in 'const $viewport'.
+          const resourceCountSelector =
+            "*:not([data-pagelet])>*:not([role]):not([data-pagelet])>*>*>*[role]>*>ul[class] li[class]";
+
+          // not loop each in single top post
+          if (tagName === "DIV" && index != 0) {
+            return;
+          }
+
+          const $childElement = $mainElement.children("div").children("div");
+
+          if ($childElement.length === 0) return;
+
+          logger("Found insert point", $childElement);
+
+          // Modify carousel post counter's position to not interfere with our buttons
+          if ($mainElement.find("._acay").length > 0) {
+            if ($mainElement.find("._acay + .x24i39r").length > 0) {
+              $mainElement.find("._acay + .x24i39r").css("top", "37px");
+            }
+
+            const observeNode = $mainElement.find("._acay").first().parent()[0];
+            var observer = new MutationObserver(function () {
+              $mainElement.find("._acay + .x24i39r").css("top", "37px");
+            });
+
+            observer.observe(observeNode, {
+              childList: true,
+            });
+          }
+
+          $childElement
+            .eq(tagName === "DIV" ? 0 : $childElement.length - 2)
+            .addClass("insta-controls-media-host")
+            .append(`<div class="button_wrapper">`);
+
+          // Add icons
+          const DownloadElement = `<div data-ih-locale-title="DW" title="${_i18n("DW")}" class="IG_DW_MAIN">${SVG.DOWNLOAD}</div>`;
+          const CopyElement = `<div data-ih-locale-title="COPY_MEDIA" title="${_i18n("COPY_MEDIA")}" class="IG_COPY_MAIN">${SVG.COPY}</div>`;
+          const NewTabElement = `<div data-ih-locale-title="NEW_TAB" title="${_i18n("NEW_TAB")}" class="IG_NEWTAB_MAIN">${SVG.NEW_TAB}</div>`;
+          const ThumbnailElement = `<div data-ih-locale-title="VIDEO_THUMBNAIL" title="${_i18n("VIDEO_THUMBNAIL")}" class="IG_THUMBNAIL_MAIN">${SVG.THUMBNAIL}</div>`;
+          const ViewerElement = `<div data-ih-locale-title="IMAGE_VIEWER" title="${_i18n("IMAGE_VIEWER")}" class="IG_IMAGE_VIEWER">${SVG.FULLSCREEN}</div>`;
+
+          $childElement.find(".button_wrapper").append(DownloadElement);
+          $childElement.find(".button_wrapper").append(CopyElement);
+
+          const resource_count = $mainElement.find(
+            resourceCountSelector,
+          ).length;
+
+          if (
+            resource_count > 1 &&
+            USER_SETTING.DIRECT_DOWNLOAD_VISIBLE_RESOURCE &&
+            !USER_SETTING.DIRECT_DOWNLOAD_ALL
+          ) {
+            const DownloadAllElement = `<div data-ih-locale-title="DW_ALL" title="${_i18n("DW_ALL")}" class="IG_DW_ALL_MAIN">${SVG.DOWNLOAD_ALL}</div>`;
+            $childElement.find(".button_wrapper").append(DownloadAllElement);
+          }
+
+          $childElement.find(".button_wrapper").append(NewTabElement);
+
+          let $resourceLayout = $childElement
+            .filter(function () {
+              return $(this).width() > 100 && $(this).height() > 100;
+            })
+            .first();
+
+          let $isNewPostStyleLayout =
+            $resourceLayout
+              .find(`a[role="link"][tabindex="0"][href^="/"]`)
+              .filter(function () {
+                return (
+                  !$(this).attr("href").startsWith("/p/") &&
+                  !$(this).attr("href").startsWith("/reels/")
+                );
+              }).length > 0;
+
+          // Make sure the button wrapper doesn't cover the "More Options" button.
+          if ($isNewPostStyleLayout) {
+            $childElement.find(".button_wrapper").css("top", "45px");
+          }
+
+          setTimeout(() => {
+            // eslint-disable-next-line no-unused-vars
+            const checkNodeCallback = (entries, observer) => {
+              entries.forEach((entry) => {
+                //logger(entry);
+                if (entry.isIntersecting) {
+                  var $targetNode = $(entry.target);
+                  $childElement.find(".IG_THUMBNAIL_MAIN")?.remove();
+                  $childElement.find(".IG_IMAGE_VIEWER")?.remove();
+
+                  // Check if video?
+                  if ($targetNode.find("video").length > 0) {
+                    if ($childElement.find(".IG_THUMBNAIL_MAIN").length === 0) {
+                      $childElement
+                        .find(".button_wrapper")
+                        .append(ThumbnailElement);
+                    }
+
+                    initPostVideoFunction($mainElement);
+                  }
+                  // is Image
+                  else {
+                    $childElement.find(".button_wrapper").append(ViewerElement);
+                  }
+                }
+              });
+            };
+
+            const observer_i = new IntersectionObserver(checkNodeCallback, {
+              root: $childElement.find(".button_wrapper").parent()[0],
+              rootMargin: "0px",
+              threshold: 0.1,
+            });
+
+            // trigger when switching resources
+            // eslint-disable-next-line no-unused-vars
+            const observer = new MutationObserver(function (mutation, owner) {
+              var target = mutation.at(0)?.target;
+              observer_i.disconnect();
+
+              $(target)
+                .find("li")
+                .each(function () {
+                  if (
+                    $(target).find("video").length > 0 ||
+                    $(target).find("img").length > 0
+                  ) {
+                    observer_i.observe(this);
+                  }
+                });
+            });
+
+            let $triggeredTarget = null;
+            // first onload
+            $childElement
+              .find(".button_wrapper")
+              .parent()
+              .find('ul li, div[role="button"] > div, div[class] > div')
+              .each(function () {
+                const $targetNode =
+                  $(this).find("video").length > 0
+                    ? $(this).find("video")?.first()
+                    : $(this).find("img")?.first();
+
+                // Check if the node is visible and has size,
+                // and not the same node as last triggered one to avoid duplicated trigger
+                // when switching resources with same container
+                if (
+                  $targetNode.length > 0 &&
+                  $targetNode.is(":visible") &&
+                  $targetNode.get(0).getBoundingClientRect().width > 0 &&
+                  $targetNode.get(0).getBoundingClientRect().height > 0 &&
+                  this.getBoundingClientRect().width > 64 &&
+                  this.getBoundingClientRect().height > 64 &&
+                  $triggeredTarget?.get(0) != $targetNode?.get(0)
+                ) {
+                  // ignore the image without alt attribute,
+                  // because it is usually used for video thumbnail
+                  if (
+                    $targetNode.get(0).tagName === "IMG" &&
+                    $targetNode.attr("alt")?.length == 0
+                  ) {
+                    return;
+                  }
+
+                  $triggeredTarget = $targetNode;
+                  observer_i.observe(this);
+                }
+              });
+
+            const listRoot = $childElement
+              .find(".button_wrapper")
+              .parent()
+              .find('ul li, div[role="button"] > div')
+              .first()
+              .parent()[0];
+
+            if (listRoot) {
+              observer.observe(listRoot, {
+                attributes: true,
+                childList: true,
+              });
+            } else {
+              initPostVideoFunction($mainElement);
+              logger(
+                "Cannot find resource list root element, thumbnail and viewer button may not work.",
+              );
+            }
+          }, 50);
+
+          $childElement.css("position", "relative");
+
+          state.GL_registerEventList.push({
+            element: this,
+            trigger: [
+              ".IG_THUMBNAIL_MAIN",
+              ".IG_NEWTAB_MAIN",
+              ".IG_DW_ALL_MAIN",
+              ".IG_COPY_MAIN",
+              ".IG_DW_MAIN",
+              ".IG_IMAGE_VIEWER",
+            ],
+          });
+
+          $(this).on("click", ".IG_IMAGE_VIEWER", async function (e) {
+            consumeInjectedClick(e);
+            if (state.bulkDownloadActive) return;
+            updateLoadingBar(true);
+
+            try {
+              state.GL_username = $mainElement.attr("data-username");
+              state.GL_postPath =
+                location.pathname.replace(/\/$/, "").split("/").at(-1) ||
+                $mainElement
+                  .find('a[href^="/p/"]')
+                  .first()
+                  .attr("href")
+                  .split("/")
+                  .at(2) ||
+                $(this)
+                  .parent()
+                  .parent()
+                  .parent()
+                  .children("div:last-child")
+                  .children("div")
+                  .children("div:last-child")
+                  .find('a[href^="/p/"]')
+                  .last()
+                  .attr("href")
+                  .split("/")
+                  .at(2);
+
+              var index = getVisibleNodeIndex($mainElement);
+
+              IG_createDM(true, false);
+
+              await createMediaListDOM(
+                state.GL_postPath,
+                MEDIA_LIST_SELECTOR,
+                "",
+              );
+
+              var $linkElement = getMediaListLinkByIndex(index);
+              var href = $linkElement?.attr("data-href");
+
+              if ($linkElement == null || $linkElement.length === 0) {
+                console.error("Cannot find image viewer link element.", {
+                  index,
+                  postPath: state.GL_postPath,
+                });
+                alert("Cannot find resource url.");
+                return;
+              }
+
+              if (href) {
+                let viewerHref = href;
+                try {
+                  viewerHref = replaceSameOriginHost(href);
+                } catch (err) {
+                  logger(
+                    "Open image viewer",
+                    "replaceSameOriginHost failed, using original href",
+                    err?.message || err,
+                  );
+                }
+                openImageViewer(viewerHref);
+              } else {
+                console.error("Cannot find image viewer data-href.", {
+                  index,
+                  postPath: state.GL_postPath,
+                  linkElement: $linkElement?.get(0),
+                });
+                alert("Cannot find resource url.");
+              }
+            } catch (err) {
+              console.error("Failed to open image viewer:", err);
+              alert("Cannot find resource url.");
+            } finally {
+              updateLoadingBar(false);
+              removeMediaDialog();
+            }
+          });
+
+          $(this).on("click", ".IG_THUMBNAIL_MAIN", function (e) {
+            consumeInjectedClick(e);
+            if (state.bulkDownloadActive) return;
+            updateLoadingBar(true);
+
+            state.GL_username = $mainElement.attr("data-username");
+            state.GL_postPath =
+              location.pathname.replace(/\/$/, "").split("/").at(-1) ||
+              $mainElement
+                .find('a[href^="/p/"]')
+                .first()
+                .attr("href")
+                .split("/")
+                .at(2) ||
+              $(this)
+                .parent()
+                .parent()
+                .parent()
+                .children("div:last-child")
+                .children("div")
+                .children("div:last-child")
+                .find('a[href^="/p/"]')
+                .last()
+                .attr("href")
+                .split("/")
+                .at(2);
+
+            var index = getVisibleNodeIndex($mainElement);
+
+            IG_createDM(true, false);
+
+            createMediaListDOM(
+              state.GL_postPath,
+              MEDIA_LIST_SELECTOR,
+              "",
+            ).then(() => {
+              var $videoThumbnail = getMediaListLinkByIndex(index)
+                ?.parent()
+                .find(".videoThumbnail")
+                ?.first();
+
+              if ($videoThumbnail != null && $videoThumbnail.length > 0) {
+                $videoThumbnail.trigger("click");
+              } else {
+                alert("Cannot find thumbnail URL.");
+              }
+
+              updateLoadingBar(false);
+              removeMediaDialog();
+            });
+          });
+
+          $(this).on("click", ".IG_NEWTAB_MAIN", async function (e) {
+            consumeInjectedClick(e);
+            if (state.bulkDownloadActive) return;
+            updateLoadingBar(true);
+
+            try {
+              state.GL_username = $mainElement.attr("data-username");
+              state.GL_postPath =
+                location.pathname.replace(/\/$/, "").split("/").at(-1) ||
+                $mainElement
+                  .find('a[href^="/p/"]')
+                  .first()
+                  .attr("href")
+                  .split("/")
+                  .at(2) ||
+                $(this)
+                  .parent()
+                  .parent()
+                  .parent()
+                  .children("div:last-child")
+                  .children("div")
+                  .children("div:last-child")
+                  .find('a[href^="/p/"]')
+                  .last()
+                  .attr("href")
+                  .split("/")
+                  .at(2);
+
+              var index = getVisibleNodeIndex($mainElement);
+
+              IG_createDM(true, false);
+
+              await createMediaListDOM(
+                state.GL_postPath,
+                MEDIA_LIST_SELECTOR,
+                "",
+              );
+
+              var $linkElement = getMediaListLinkByIndex(index);
+
+              if (
+                USER_SETTING.FORCE_RESOURCE_VIA_MEDIA &&
+                USER_SETTING.NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST
+              ) {
+                if ($linkElement == null || $linkElement.length === 0) {
+                  console.error("Cannot find new-tab link element.", {
+                    index,
+                    postPath: state.GL_postPath,
+                  });
+                  alert("Cannot find open tab URL.");
+                  return;
+                }
+                await triggerLinkElement($linkElement.first()[0], true);
+              } else {
+                let href = $linkElement?.attr("data-href");
+                if (href) {
+                  openNewTab(replaceSameOriginHost(href));
+                } else {
+                  console.error("Cannot find new-tab data-href.", {
+                    index,
+                    postPath: state.GL_postPath,
+                    linkElement: $linkElement?.get(0),
+                  });
+                  alert("Cannot find open tab URL.");
+                }
+              }
+            } catch (err) {
+              console.error("Failed to open resource in new tab:", err);
+              alert("Cannot find open tab URL.");
+            } finally {
+              updateLoadingBar(false);
+              removeMediaDialog();
+            }
+          });
+
+          // Running if user clicks the copy-media icon. Clipboard.write() must be
+          // started directly from this handler; the ClipboardItem receives promises
+          // so media lookup and conversion can continue without losing user activation.
+          $(this).on("click", ".IG_COPY_MAIN", function (e) {
+            consumeInjectedClick(e);
+            const $copyButton = $(this);
+
+            if (
+              state.bulkDownloadActive ||
+              $copyButton.hasClass("is-busy")
+            ) {
+              return;
+            }
+
+            state.GL_postPath = getPostPathForMediaAction($mainElement);
+            if (!state.GL_postPath) {
+              const message = _i18n("COPY_MEDIA_ERROR");
+              console.error("Cannot determine the post path for clipboard copy.");
+              showClipboardToast(message, true);
+              return;
+            }
+
+            const index = getVisibleNodeIndex(
+              $copyButton.parent().parent().parent(),
+            );
+            const mediaKind = getVisiblePostMediaKind($copyButton);
+
+            $copyButton
+              .removeClass("is-success is-error")
+              .addClass("is-busy")
+              .attr("aria-busy", "true")
+              .attr("title", _i18n("COPY_MEDIA_WORKING"))
+              .html(SVG.COPY);
+
+            let clipboardTask;
+            try {
+              clipboardTask = startPostMediaClipboardWrite(
+                state.GL_postPath,
+                index,
+                mediaKind,
+              );
+            } catch (err) {
+              console.error("Failed to start clipboard copy:", err);
+              $copyButton
+                .removeClass("is-busy")
+                .addClass("is-error")
+                .removeAttr("aria-busy")
+                .attr("title", _i18n("COPY_MEDIA_ERROR"))
+                .html(SVG.CLOSE);
+              showClipboardToast(_i18n("COPY_MEDIA_UNSUPPORTED"), true);
+              resetCopyMediaButton($copyButton);
+              return;
+            }
+
+            clipboardTask.promise
+              .then(() => {
+                const copiedVideoUrl =
+                  clipboardTask.resultType === "video-url";
+                const message = copiedVideoUrl
+                  ? _i18n("COPY_MEDIA_VIDEO_URL_SUCCESS")
+                  : _i18n("COPY_MEDIA_SUCCESS");
+
+                $copyButton
+                  .removeClass("is-busy is-error")
+                  .addClass("is-success")
+                  .removeAttr("aria-busy")
+                  .attr("title", message)
+                  .html(SVG.CHECK);
+                showClipboardToast(message, false);
+              })
+              .catch((err) => {
+                console.error("Failed to copy media to clipboard:", err);
+                $copyButton
+                  .removeClass("is-busy is-success")
+                  .addClass("is-error")
+                  .removeAttr("aria-busy")
+                  .attr("title", _i18n("COPY_MEDIA_ERROR"))
+                  .html(SVG.CLOSE);
+                showClipboardToast(_i18n("COPY_MEDIA_ERROR"), true);
+              })
+              .finally(() => {
+                resetCopyMediaButton($copyButton);
+              });
+          });
+
+          // Running if user click the download all icon
+          $(this).on("click", ".IG_DW_ALL_MAIN", async function (e) {
+            consumeInjectedClick(e);
+            const $downloadAllButton = $(this);
+            if (
+              state.bulkDownloadActive ||
+              $downloadAllButton.hasClass("is-busy")
+            ) {
+              return;
+            }
+
+            state.bulkDownloadActive = true;
+            const $bulkMediaScratch = $("<div>");
+            $downloadAllButton
+              .addClass("is-busy")
+              .attr("aria-busy", "true");
+
+            try {
+              state.GL_username = $mainElement.attr("data-username");
+              state.GL_postPath =
+                location.pathname.replace(/\/$/, "").split("/").at(-1) ||
+                $mainElement
+                  .find('a[href^="/p/"]')
+                  .first()
+                  .attr("href")
+                  .split("/")
+                  .at(2) ||
+                $downloadAllButton
+                  .parent()
+                  .parent()
+                  .parent()
+                  .children("div:last-child")
+                  .children("div")
+                  .children("div:last-child")
+                  .find('a[href^="/p/"]')
+                  .last()
+                  .attr("href")
+                  .split("/")
+                  .at(2);
+
+              await createMediaListDOM(
+                state.GL_postPath,
+                $bulkMediaScratch,
+                _i18n("LOAD_BLOB_MULTIPLE"),
+              );
+
+              const $mediaLinks = getMediaListLinks($bulkMediaScratch);
+              if ($mediaLinks.length === 0) {
+                throw new Error("No downloadable media found for this post.");
+              }
+
+              await batchDownloadPostFiles($mediaLinks);
+            } catch (err) {
+              console.error("Failed to download all post media:", err);
+              alert("Cannot find downloadable media for this post.");
+            } finally {
+              $bulkMediaScratch.empty();
+              state.bulkDownloadActive = false;
+              $downloadAllButton
+                .removeClass("is-busy")
+                .removeAttr("aria-busy");
+            }
+          });
+
+          // Running if user click the download icon
+          $(this).on("click", ".IG_DW_MAIN", async function (e) {
+            consumeInjectedClick(e);
+            if (state.bulkDownloadActive) return;
+            state.GL_username = $mainElement.attr("data-username");
+            state.GL_postPath =
+              location.pathname.replace(/\/$/, "").split("/").at(-1) ||
+              $mainElement
+                .find('a[href^="/p/"]')
+                .first()
+                .attr("href")
+                .split("/")
+                .at(2) ||
+              $(this)
+                .parent()
+                .parent()
+                .parent()
+                .children("div:last-child")
+                .children("div")
+                .children("div:last-child")
+                .find('a[href^="/p/"]')
+                .last()
+                .attr("href")
+                .split("/")
+                .at(2);
+
+            // Create element that download dailog
+            IG_createDM(USER_SETTING.DIRECT_DOWNLOAD_ALL, true);
+
+            $("#article-id").html(
+              `<a href="https://www.instagram.com/p/${state.GL_postPath}">${state.GL_postPath}</a>`,
+            );
+
+            if (USER_SETTING.DIRECT_DOWNLOAD_VISIBLE_RESOURCE) {
+              updateLoadingBar(true);
+              IG_setDM(true);
+
+              var index = getVisibleNodeIndex(
+                $(this).parent().parent().parent(),
+              );
+
+              await createMediaListDOM(
+                state.GL_postPath,
+                MEDIA_LIST_SELECTOR,
+                "",
+              );
+
+              var $linkElement = getMediaListLinkByIndex(index);
+              var href = $linkElement?.attr("data-href");
+
+              if ($linkElement == null || $linkElement.length === 0) {
+                console.error("Cannot find download link element.", {
+                  index,
+                  postPath: state.GL_postPath,
+                });
+                alert("Cannot find download URL.");
+              } else if (href) {
+                updateLoadingBar(false);
+                await triggerLinkElement($linkElement[0]);
+              } else {
+                console.error("Cannot find download data-href.", {
+                  index,
+                  postPath: state.GL_postPath,
+                  linkElement: $linkElement?.get(0),
+                });
+                alert("Cannot find download URL.");
+              }
+
+              updateLoadingBar(false);
+              removeMediaDialog();
+
+              return;
+            }
+
+            if (!USER_SETTING.DIRECT_DOWNLOAD_ALL) {
+              // Find video/image element and add the download icon
+              var s = 0;
+              var multiple = $(this)
+                .parent()
+                .parent()
+                .find(resourceCountSelector).length;
+              var blob = USER_SETTING.FORCE_FETCH_ALL_RESOURCES;
+              var publish_time = new Date(
+                $(this)
+                  .parent()
+                  .parent()
+                  .parent()
+                  .find("a[href] time[datetime]")
+                  .filter(function () {
+                    let href = $(this).parents("a[href]").attr("href");
+                    return (
+                      href?.startsWith("/p/") ||
+                      href?.match(/\/([\w.\-_]+)\/p\//gi) != null
+                    );
+                  })
+                  .first()
+                  .attr("datetime"),
+              ).getTime();
+
+              // If posts have more than one images or videos.
+              if (multiple) {
+                $(this)
+                  .parent()
+                  .parent()
+                  .find(resourceCountSelector)
+                  .each(function () {
+                    let element_videos = $(this)
+                      .parent()
+                      .parent()
+                      .parent()
+                      .find("video");
+                    //if(element_videos && element_videos.attr('src') && element_videos.attr('src').match(/^blob:/ig)){
+                    if (element_videos && element_videos.attr("src")) {
+                      blob = true;
+                    }
+                  });
+
+                if (blob || USER_SETTING.FORCE_RESOURCE_VIA_MEDIA) {
+                  createMediaListDOM(
+                    state.GL_postPath,
+                    ".IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_BODY",
+                    _i18n("LOAD_BLOB_MULTIPLE"),
+                  );
+                } else {
+                  $(this)
+                    .parent()
+                    .parent()
+                    .find(resourceCountSelector)
+                    .each(function () {
+                      s++;
+                      let element_videos = $(this).find("video");
+                      let element_images = $(this).find("._aagv img");
+                      let imgLink = element_images.attr("srcset")
+                        ? element_images.attr("srcset").split(" ")[0]
+                        : element_images.attr("src");
+
+                      if (element_videos && element_videos.attr("src")) {
+                        blob = true;
+                      }
+                      if (element_images && imgLink) {
+                        $(
+                          ".IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_BODY",
+                        ).append(
+                          `<a datetime="${publish_time}" data-needed="direct" data-path="${state.GL_postPath}" data-name="photo" data-type="jpg" data-globalIndex="${s}" href="javascript:;" data-href="${imgLink}"><img width="100" src="${imgLink}" /><br/>- <span data-ih-locale="IMG">${_i18n("IMG")}</span> ${s} -</a>`,
+                        );
+                      }
+                    });
+
+                  if (blob) {
+                    createMediaListDOM(
+                      state.GL_postPath,
+                      ".IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_BODY",
+                      _i18n("LOAD_BLOB_RELOAD"),
+                    );
+                  }
+                }
+              } else {
+                if (USER_SETTING.FORCE_RESOURCE_VIA_MEDIA) {
+                  createMediaListDOM(
+                    state.GL_postPath,
+                    ".IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_BODY",
+                    _i18n("LOAD_BLOB_MULTIPLE"),
+                  );
+                } else {
+                  s++;
+                  let element_videos = $(this)
+                    .parent()
+                    .parent()
+                    .parent()
+                    .find("video");
+                  let element_images = $(this)
+                    .parent()
+                    .parent()
+                    .parent()
+                    .find("._aagv img");
+                  let imgLink = element_images.attr("srcset")
+                    ? element_images.attr("srcset").split(" ")[0]
+                    : element_images.attr("src");
+
+                  if (element_videos && element_videos.attr("src")) {
+                    createMediaListDOM(
+                      state.GL_postPath,
+                      ".IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_BODY",
+                      _i18n("LOAD_BLOB_ONE"),
+                    );
+                  }
+                  if (element_images && imgLink) {
+                    $(
+                      ".IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_BODY",
+                    ).append(
+                      `<a datetime="${publish_time}" data-needed="direct" data-path="${state.GL_postPath}" data-name="photo" data-type="jpg" data-globalIndex="${s}" href="javascript:;" data-href="${imgLink}"><img width="100" src="${imgLink}" /><br/>- <span data-ih-locale="IMG">${_i18n("IMG")}</span> ${s} -</a>`,
+                    );
+                  }
+                }
+              }
+            }
+
+            $(".IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_BODY a").each(
+              function () {
+                $(this).wrap("<div></div>");
+                $(this).before(
+                  '<label class="inner_box_wrapper"><input class="inner_box" type="checkbox"><span></span></label>',
+                );
+                $(this).after(
+                  `<div data-ih-locale-title="NEW_TAB" title="${_i18n("NEW_TAB")}" class="newTab">${SVG.NEW_TAB}</div>`,
+                );
+
+                if ($(this).attr("data-name") == "video") {
+                  $(this).after(
+                    `<div data-ih-locale-title="VIDEO_THUMBNAIL" title="${_i18n("VIDEO_THUMBNAIL")}" class="videoThumbnail">${SVG.THUMBNAIL}</div>`,
+                  );
+                }
+              },
+            );
+
+            if (USER_SETTING.DIRECT_DOWNLOAD_ALL) {
+              await createMediaListDOM(
+                state.GL_postPath,
+                MEDIA_LIST_SELECTOR,
+                _i18n("LOAD_BLOB_MULTIPLE"),
+              );
+              await batchDownloadPostFiles(getMediaListLinks());
+              removeMediaDialog();
+            }
+          });
+
+          // Add the mark that download is ready
+          var username =
+            $(this)
+              .find("header > div:last-child > div:first-child span a")
+              .first()
+              .text() ||
+            $(this)
+              .find('a[href^="/"]')
+              .filter(function () {
+                return $(this)?.text()?.length > 0;
+              })
+              .first()
+              .text();
+
+          $(this).attr("data-snig", "canDownload");
+          $(this).attr("data-username", username);
+        }
+      });
+  }
+
+  /**
+   * filterResourceData
+   * @description Standardized resource object format.
+   *
+   * @param  {Object}  data
+   * @return {Object}
+   */
+  function filterResourceData(data) {
+    var resource = data.shortcode_media ?? data;
+    if (resource.owner == null && resource.user != null) {
+      resource.owner = resource.user;
+    }
+
+    if (resource.owner == null) {
+      logger("carousel_media:", "undefined username");
+      alert("carousel_media: undefined username");
+    }
+
+    return resource;
+  }
+
+  /**
+   * createMediaListDOM
+   * @description Create a list of media elements from post URLs.
+   *
+   * @param  {String}  postURL
+   * @param  {String|jQuery}  selector - CSS selector or container receiving the media list.
+   * @param  {String}  message - i18n display loading message
+   * @return {void}
+   */
+  async function createMediaListDOM(postURL, selector, message) {
+    try {
+      const $container = $(selector);
+      $container.find("a").remove();
+      $container.append('<p id="_SNLOAD">' + message + "</p>");
+      let result = await getBlobMedia(postURL);
+      let resource = filterResourceData(result.data);
+
+      if (result.type === "query_hash") {
+        let idx = 1;
+
+        // GraphVideo
+        if (resource.__typename == "GraphVideo" && resource.video_url) {
+          $container.append(
+            `<a media-id="${resource.id}" datetime="${resource.taken_at_timestamp}" data-blob="true" data-needed="direct" data-path="${resource.shortcode}" data-name="video" data-type="mp4" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${resource.video_url}"><img width="100" src="${resource.display_resources[1].src}" /><br/>- <span data-ih-locale="VID">${_i18n("VID")}</span> ${idx} -</a>`,
+          );
+          idx++;
+
+          if (resource.video_dash_manifest) {
+            state.GL_mediaDataCache[resource.id] = resource;
+          }
+        }
+        // GraphImage
+        if (resource.__typename == "GraphImage") {
+          $container.append(
+            `<a media-id="${resource.id}" datetime="${resource.taken_at_timestamp}" data-blob="true" data-needed="direct" data-path="${resource.shortcode}" data-name="photo" data-type="jpg" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${resource.display_resources[resource.display_resources.length - 1].src}"><img width="100" src="${resource.display_resources[1].src}" /><br/>- <span data-ih-locale="IMG">${_i18n("IMG")}</span> ${idx} -</a>`,
+          );
+          idx++;
+        }
+        // GraphSidecar
+        if (
+          resource.__typename == "GraphSidecar" &&
+          resource.edge_sidecar_to_children
+        ) {
+          for (let e of resource.edge_sidecar_to_children.edges) {
+            if (e.node.__typename == "GraphVideo") {
+              $container.append(
+                `<a media-id="${e.node.id}" datetime="${resource.taken_at_timestamp}" data-blob="true" data-needed="direct" data-path="${resource.shortcode}" data-name="video" data-type="mp4" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${e.node.video_url}"><img width="100" src="${e.node.display_resources[1].src}" /><br/>- <span data-ih-locale-title="VID">${_i18n("VID")}</span> ${idx} -</a>`,
+              );
+              if (e.node.video_dash_manifest) {
+                state.GL_mediaDataCache[e.node.id] = e.node;
+              }
+            }
+
+            if (e.node.__typename == "GraphImage") {
+              $container.append(
+                `<a media-id="${e.node.id}" datetime="${resource.taken_at_timestamp}" data-blob="true" data-needed="direct" data-path="${resource.shortcode}" data-name="photo" data-type="jpg" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${e.node.display_resources[e.node.display_resources.length - 1].src}"><img width="100" src="${e.node.display_resources[1].src}" /><br/>- <span data-ih-locale="IMG">${_i18n("IMG")}</span> ${idx} -</a>`,
+              );
+            }
+            idx++;
+          }
+        }
+      } else {
+        if (resource.carousel_media) {
+          logger("carousel_media");
+
+          resource.carousel_media.forEach((mda, ind) => {
+            let idx = ind + 1;
+            // Image
+            if (mda.video_versions == null) {
+              mda.image_versions2.candidates.sort(function (a, b) {
+                let aSTP = new URL(a.url).searchParams.get("stp");
+                let bSTP = new URL(b.url).searchParams.get("stp");
+
+                if (aSTP && bSTP) {
+                  if (aSTP.length > bSTP.length) return 1;
+                  if (aSTP.length < bSTP.length) return -1;
+                } else {
+                  if (a.width < b.width) return 1;
+                  if (a.width > b.width) return -1;
+                }
+
+                return 0;
+              });
+
+              $container.append(
+                `<a media-id="${mda.pk}" datetime="${mda.taken_at}" data-blob="true" data-needed="direct" data-path="${resource.code}" data-name="photo" data-type="jpg" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${mda.image_versions2.candidates[0].url}"><img width="100" src="${mda.image_versions2.candidates[0].url}" /><br/>- <span data-ih-locale="IMG">${_i18n("IMG")}</span> ${idx} -</a>`,
+              );
+            }
+            // Video
+            else {
+              $container.append(
+                `<a media-id="${mda.pk}" datetime="${mda.taken_at}" data-blob="true" data-needed="direct" data-path="${resource.code}" data-name="video" data-type="mp4" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${mda.video_versions[0].url}"><img width="100" src="${mda.image_versions2.candidates[0].url}" /><br/>- <span data-ih-locale="VID">${_i18n("VID")}</span> ${idx} -</a>`,
+              );
+              if (mda.video_dash_manifest) {
+                state.GL_mediaDataCache[mda.pk] = mda;
+              }
+            }
+          });
+        } else {
+          let idx = 1;
+          // Image
+          if (resource.video_versions == null) {
+            resource.image_versions2.candidates.sort(function (a, b) {
+              let aSTP = new URL(a.url).searchParams.get("stp");
+              let bSTP = new URL(b.url).searchParams.get("stp");
+
+              if (aSTP && bSTP) {
+                if (aSTP.length > bSTP.length) return 1;
+                if (aSTP.length < bSTP.length) return -1;
+              } else {
+                if (a.width < b.width) return 1;
+                if (a.width > b.width) return -1;
+              }
+
+              return 0;
+            });
+
+            $container.append(
+              `<a media-id="${resource.pk}" datetime="${resource.taken_at}" data-blob="true" data-needed="direct" data-path="${resource.code}" data-name="photo" data-type="jpg" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${resource.image_versions2.candidates[0].url}"><img width="100" src="${resource.image_versions2.candidates[0].url}" /><br/>- <span data-ih-locale="IMG">${_i18n("IMG")}</span> ${idx} -</a>`,
+            );
+          }
+          // Video
+          else {
+            if (resource.video_dash_manifest) {
+              state.GL_mediaDataCache[resource.pk] = resource;
+            }
+            $container.append(
+              `<a media-id="${resource.pk}" datetime="${resource.taken_at}" data-blob="true" data-needed="direct" data-path="${resource.code}" data-name="video" data-type="mp4" data-username="${resource.owner.username}" data-globalIndex="${idx}" href="javascript:;" data-href="${resource.video_versions[0].url}"><img width="100" src="${resource.image_versions2.candidates[0].url}" /><br/>- <span data-ih-locale="VID">${_i18n("VID")}</span> ${idx} -</a>`,
+            );
+          }
+        }
+      }
+
+      $container.find("#_SNLOAD").remove();
+      $container.find('a[data-needed="direct"]').each(function () {
+        $(this).wrap("<div></div>");
+        $(this).before(
+          '<label class="inner_box_wrapper"><input class="inner_box" type="checkbox"><span></span></label>',
+        );
+        $(this).after(
+          `<div data-ih-locale-title="NEW_TAB" title="${_i18n("NEW_TAB")}" class="newTab">${SVG.NEW_TAB}</div>`,
+        );
+
+        if ($(this).attr("data-name") == "video") {
+          $(this).after(
+            `<div data-ih-locale-title="VIDEO_THUMBNAIL" title="${_i18n("VIDEO_THUMBNAIL")}" class="videoThumbnail">${SVG.THUMBNAIL}</div>`,
+          );
+        }
+      });
+      if ($container.closest(".IG_POPUP_DIG").length > 0) {
+        updatePopupSelectionSummary();
+      }
+    } catch (err) {
+      logger("createMediaListDOM", err);
+    }
+  }
+
+  function getMediaListLinks(selector = MEDIA_LIST_SELECTOR) {
+    return $(selector).find('a[data-needed="direct"]');
+  }
+
+  function extractPostPathFromURL(value) {
+    let url;
+    try {
+      url = new URL(value, location.origin);
+    } catch (_err) {
+      return null;
+    }
+
+    if (
+      url.hostname !== location.hostname &&
+      url.hostname !== "instagram.com" &&
+      !url.hostname.endsWith(".instagram.com")
+    ) {
+      return null;
+    }
+
+    const segments = url.pathname.split("/").filter(Boolean);
+    let postShortcode = null;
+
+    if (
+      segments[0]?.toLowerCase() === "p" &&
+      (segments.length === 2 ||
+        (segments.length === 3 &&
+          segments[2].toLowerCase() === "embed"))
+    ) {
+      postShortcode = segments[1];
+    } else if (
+      segments.length === 3 &&
+      /^[A-Za-z0-9._]+$/.test(segments[0]) &&
+      segments[1]?.toLowerCase() === "p"
+    ) {
+      postShortcode = segments[2];
+    }
+
+    if (/^[A-Za-z0-9_-]{5,64}$/.test(postShortcode || "")) {
+      return postShortcode;
+    }
+
+    return parseMaximumReelShortcode(url.href, true);
+  }
+
+  function getPostPathForMediaAction($mainElement) {
+    const locationPath = extractPostPathFromURL(location.href);
+    if (locationPath) return locationPath;
+
+    let postPath = null;
+    $mainElement
+      .find(
+        'a[href*="/p/"], a[href*="/reel/"], a[href*="/reels/"]',
+      )
+      .each(function () {
+        postPath = extractPostPathFromURL($(this).attr("href"));
+        return postPath ? false : undefined;
+      });
+
+    return postPath;
+  }
+
+  function getVisiblePostMediaKind($copyButton) {
+    const $host = $copyButton.closest(".insta-controls-media-host");
+    const host = $host.get(0);
+
+    if (host) {
+      const hostRect = host.getBoundingClientRect();
+      let bestElement = null;
+      let bestArea = 0;
+
+      $host.find("video, img").each(function () {
+        const rect = this.getBoundingClientRect();
+        const intersectionWidth = Math.max(
+          0,
+          Math.min(rect.right, hostRect.right) -
+            Math.max(rect.left, hostRect.left),
+        );
+        const intersectionHeight = Math.max(
+          0,
+          Math.min(rect.bottom, hostRect.bottom) -
+            Math.max(rect.top, hostRect.top),
+        );
+        const intersectionArea = intersectionWidth * intersectionHeight;
+
+        if (
+          intersectionArea > bestArea ||
+          (intersectionArea === bestArea &&
+            this.tagName === "VIDEO" &&
+            bestElement?.tagName !== "VIDEO")
+        ) {
+          bestArea = intersectionArea;
+          bestElement = this;
+        }
+      });
+
+      if (bestElement?.tagName === "VIDEO") return "video";
+      if (bestElement?.tagName === "IMG") return "image";
+    }
+
+    return $copyButton.siblings(".IG_THUMBNAIL_MAIN").length > 0
+      ? "video"
+      : "image";
+  }
+
+  async function resolvePostMediaForClipboard(postPath, index) {
+    const $scratch = $("<div>");
+
+    try {
+      await createMediaListDOM(postPath, $scratch, "");
+      const $linkElement = $scratch
+        .find(`a[data-globalindex="${index + 1}"]`)
+        .first();
+
+      if ($linkElement.length === 0) {
+        throw new Error("Cannot find the visible media resource.");
+      }
+
+      const url = $linkElement.attr("data-href");
+      if (!url) {
+        throw new Error("The visible media resource has no URL.");
+      }
+
+      const mediaType = String($linkElement.attr("data-type") || "")
+        .trim()
+        .toLowerCase();
+      const mediaName = String($linkElement.attr("data-name") || "")
+        .trim()
+        .toLowerCase();
+
+      return {
+        url,
+        thumbnailUrl: $linkElement.find("img").first().attr("src") || null,
+        isVideo: mediaName === "video" || mediaType === "mp4",
+      };
+    } finally {
+      $scratch.remove();
+    }
+  }
+
+  function clipboardItemSupports(ClipboardItemCtor, mimeType) {
+    if (["text/plain", "text/html", "image/png"].includes(mimeType)) {
+      return true;
+    }
+
+    return (
+      typeof ClipboardItemCtor.supports === "function" &&
+      ClipboardItemCtor.supports(mimeType)
+    );
+  }
+
+  function ensureBlobMimeType(blob, mimeType) {
+    return blob.type === mimeType
+      ? blob
+      : blob.slice(0, blob.size, mimeType);
+  }
+
+  function canvasToPngBlob(canvas) {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error("The browser could not encode the image as PNG."));
+        }
+      }, "image/png");
+    });
+  }
+
+  async function imageBlobToPng(blob) {
+    if (blob.type === "image/png") return blob;
+
+    let drawable = null;
+    let width = 0;
+    let height = 0;
+    let cleanup = () => {};
+
+    if (typeof createImageBitmap === "function") {
+      try {
+        drawable = await createImageBitmap(blob, {
+          imageOrientation: "from-image",
+        });
+      } catch (err) {
+        logger(
+          "imageBlobToPng()",
+          "createImageBitmap with orientation failed, retrying",
+          err?.message || err,
+        );
+        drawable = await createImageBitmap(blob);
+      }
+
+      width = drawable.width;
+      height = drawable.height;
+      cleanup = () => drawable?.close?.();
+    } else {
+      const objectURL = URL.createObjectURL(blob);
+      const image = new Image();
+
+      try {
+        await new Promise((resolve, reject) => {
+          image.onload = resolve;
+          image.onerror = () =>
+            reject(new Error("The browser could not decode the image."));
+          image.src = objectURL;
+        });
+        drawable = image;
+        width = image.naturalWidth;
+        height = image.naturalHeight;
+      } catch (err) {
+        URL.revokeObjectURL(objectURL);
+        throw err;
+      }
+
+      cleanup = () => URL.revokeObjectURL(objectURL);
+    }
+
+    if (!width || !height) {
+      cleanup();
+      throw new Error("The copied image has invalid dimensions.");
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      cleanup();
+      throw new Error("The browser could not create an image canvas.");
+    }
+
+    try {
+      context.drawImage(drawable, 0, 0, width, height);
+      return await canvasToPngBlob(canvas);
+    } finally {
+      cleanup();
+      canvas.width = 0;
+      canvas.height = 0;
+    }
+  }
+
+  function startPostMediaClipboardWrite(postPath, index, mediaKind) {
+    const ClipboardItemCtor = globalThis.ClipboardItem;
+
+    if (
+      !window.isSecureContext ||
+      typeof ClipboardItemCtor !== "function" ||
+      typeof navigator.clipboard?.write !== "function"
+    ) {
+      throw new Error("Clipboard media writing is not supported.");
+    }
+
+    const sourcePromise = resolvePostMediaForClipboard(postPath, index);
+
+    if (
+      mediaKind === "video" &&
+      clipboardItemSupports(ClipboardItemCtor, "video/mp4")
+    ) {
+      const videoBlobPromise = sourcePromise.then(async (source) => {
+        if (!source.isVideo) {
+          throw new Error("The selected resource is not a video.");
+        }
+
+        const blob = await fetchMediaBlob(source.url);
+        return ensureBlobMimeType(blob, "video/mp4");
+      });
+
+      return {
+        resultType: "media",
+        promise: navigator.clipboard.write([
+          new ClipboardItemCtor(
+            { "video/mp4": videoBlobPromise },
+            { presentationStyle: "attachment" },
+          ),
+        ]),
+      };
+    }
+
+    if (mediaKind === "video") {
+      const videoURLPromise = sourcePromise.then(
+        (source) => new Blob([source.url], { type: "text/plain" }),
+      );
+
+      return {
+        resultType: "video-url",
+        promise: navigator.clipboard.write([
+          new ClipboardItemCtor(
+            { "text/plain": videoURLPromise },
+            { presentationStyle: "inline" },
+          ),
+        ]),
+      };
+    }
+
+    const imageBlobPromise = sourcePromise.then(async (source) => {
+      const imageURL = source.isVideo ? source.thumbnailUrl : source.url;
+      if (!imageURL) {
+        throw new Error("The selected resource has no copyable image.");
+      }
+
+      const blob = await fetchMediaBlob(imageURL);
+      return await imageBlobToPng(blob);
+    });
+
+    return {
+      resultType: "media",
+      promise: navigator.clipboard.write([
+        new ClipboardItemCtor(
+          { "image/png": imageBlobPromise },
+          { presentationStyle: "inline" },
+        ),
+      ]),
+    };
+  }
+
+  function showClipboardToast(message, isError) {
+    $(".insta-controls-clipboard-toast").remove();
+
+    const $toast = $("<div>")
+      .addClass("insta-controls-clipboard-toast")
+      .toggleClass("is-error", Boolean(isError))
+      .text(message)
+      .appendTo("body");
+
+    requestAnimationFrame(() => $toast.addClass("is-visible"));
+    setTimeout(() => {
+      $toast.removeClass("is-visible");
+      setTimeout(() => $toast.remove(), 200);
+    }, isError ? 3600 : 2400);
+  }
+
+  function resetCopyMediaButton($copyButton) {
+    setTimeout(() => {
+      if (!$copyButton?.length || !document.contains($copyButton.get(0))) {
+        return;
+      }
+
+      $copyButton
+        .removeClass("is-busy is-success is-error")
+        .removeAttr("aria-busy")
+        .attr("title", _i18n("COPY_MEDIA"))
+        .html(SVG.COPY);
+    }, 1800);
+  }
+
+  function getMediaListLinkByIndex(index) {
+    return $(
+      `${MEDIA_LIST_SELECTOR} a[data-globalindex="${index + 1}"]`,
+    ).first();
+  }
+
+  function consumeInjectedClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+  }
+
+  const INJECTED_ACTION_SELECTOR =
+    ".newTab, .videoThumbnail, .IG_IMAGE_VIEWER, .IG_NEWTAB_MAIN, .IG_DW_ALL_MAIN, .IG_COPY_MAIN";
+
+  function clickStartedOnInjectedAction(e) {
+    return e?.target?.closest?.(INJECTED_ACTION_SELECTOR) != null;
+  }
+
+  function removeMediaDialog() {
+    $(".IG_POPUP_DIG").remove();
+  }
+
+  /**
+   * getVisibleNodeIndex
+   * @description Get element visible node.
+   *
+   * @param  {Object}  $main
+   * @return {Integer}
+   */
+  function getVisibleNodeIndex($main) {
+    // 1. Prioritize the most efficient rule: check if the "back" button exists.
+    const hasBackButton = $main.find("button._afxv._al46._al47").length > 0;
+
+    // 2. If the "back" button does not exist, it is determined to be the first image, and the result is returned immediately.
+    if (!hasBackButton) {
+      return 0;
+    }
+    var index = 0;
+
+    // 3. If the code execution reaches here, it means it is not the first image, and the final geometric algorithm is enabled.
+
+    // a. Locate the "viewport" element: it is the grandparent of ul
+    // "_acay" class of <ul> has been removed by Instagram; [class] added to <ul> to get much lesser matches in page
+    // The parent of the parent of ul[class] always has the attributes "role"
+    // '*:not([data-pagelet])>*:not([role]):not([data-pagelet])>*>*>*[role]>*>ul[class]' is useful for avoiding the homepage stories section, account highlights section, and notes section in Messages.
+    const $viewport = $main
+      .find(
+        "*:not([data-pagelet])>*:not([role]):not([data-pagelet])>*>*>*[role]>*>ul[class]",
+      )
+      .parent()
+      .parent("[role]");
+
+    if ($viewport.length > 0) {
+      const viewportRect = $viewport.get(0).getBoundingClientRect();
+      // b. Get itemWidth: directly use the width of the viewport, this method is the most generalizable
+      const itemWidth = viewportRect.width;
+
+      // Must successfully obtain the width to continue, to prevent division by zero errors
+      if (itemWidth > 0) {
+        // STAGE 1: Visual positioning, find the currently displayed <li> element
+        // "_acaz" class of <li> has been removed by Instagram; [class] added to <li> to get much lesser matches in page
+        const viewportRight = viewportRect.right;
+        let closestSlideElement = null;
+        let minDistance = Infinity;
+
+        $main.find("li[class]").each(function () {
+          if (this.getBoundingClientRect().width === 0) return;
+
+          const slideRect = this.getBoundingClientRect();
+          const distance = Math.abs(slideRect.right - viewportRight);
+
+          if (distance < minDistance) {
+            minDistance = distance;
+            closestSlideElement = this;
+          }
+        });
+
+        // STAGE 2: Index calculation, use the found <li> and itemWidth to calculate the global index
+        if (closestSlideElement) {
+          const style = $(closestSlideElement).attr("style");
+          if (style && style.includes("translateX")) {
+            const offsetMatch = style.match(/translateX\(([^p]+)px\)/);
+            if (offsetMatch && offsetMatch[1]) {
+              const totalOffset = parseFloat(offsetMatch[1]);
+              // c. Execute the final calculation formula
+              index = Math.round(totalOffset / itemWidth);
+            }
+          }
+        }
+      }
+    }
+    return index;
+  }
+
+  /**
+   * batchDownloadPostFiles
+   * @description Batch download media files in posts to prevent browser crashes.
+   * @param {jQuery|Array} $elements
+   * @return {Promise<void>}
+   */
+  async function batchDownloadPostFiles($elements) {
+    const source = $elements?.jquery ? $elements.toArray() : $elements || [];
+    const elements = Array.from(source)
+      .map((item) => (item?.jquery ? item[0] : item))
+      .filter(Boolean);
+    const total = elements.length;
+    let completed = 0;
+
+    if (total === 0) {
+      return;
+    }
+
+    setDownloadProgress(0, total);
+
+    for (let i = 0; i < total; i += downloadBatchSize) {
+      const currentBatch = elements.slice(i, i + downloadBatchSize);
+      await Promise.all(
+        currentBatch.map((element) =>
+          triggerLinkElement(element)
+            .catch((err) => {
+              console.error("Batch download failed:", err);
+            })
+            .finally(() => {
+              completed++;
+              setDownloadProgress(completed, total);
+            }),
+        ),
+      );
+
+      if (i + downloadBatchSize < total) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, downloadBatchDelay),
+        );
+      }
+    }
+  }
+
+  /**
+   * onProfileAvatar
+   * @description Trigger user avatar download event or button display event.
+   *
+   * @param  {Boolean}  isDownload - Check if it is a download operation
+   * @return {void}
+   */
+  async function onProfileAvatar(isDownload) {
+    if (isDownload) {
+      updateLoadingBar(true);
+
+      let date = new Date().getTime();
+      let timestamp = Math.floor(date / 1000);
+      let username = location.pathname
+        .replaceAll(/(reels|tagged)\/$/gi, "")
+        .split("/")
+        .filter((s) => s.length > 0)
+        .at(-1);
+      let userInfo = await getUserId(username);
+      try {
+        let dataURL = await getUserHighSizeProfile(userInfo.user.pk);
+        saveFiles(dataURL, {
+          username,
+          sourceType: "avatar",
+          timestamp,
+          filetype: "jpg",
+          uid: userInfo.user.id,
+        });
+      } catch (err) {
+        // eslint-disable-next-line no-unused-vars
+        saveFiles(userInfo.user.profile_pic_url, {
+          username,
+          sourceType: "avatar",
+          timestamp,
+          filetype: "jpg",
+          uid: userInfo.user.id,
+        });
+      }
+
+      updateLoadingBar(false);
+    } else {
+      // Add the profile download button
+      if (!$(".IG_DWPROFILE").length) {
+        let profileTimer = setInterval(() => {
+          if ($(".IG_DWPROFILE").length) {
+            clearInterval(profileTimer);
+            return;
+          }
+
+          const selector =
+            "header > *[class]:first-child > *[class]:first-child img[alt]";
+          const $draggableElements = $(`${selector}[draggable]`)
+            .parent()
+            .parent();
+          const $nonDraggableElements = $(`${selector}:not([draggable])`)
+            .parent()
+            .parent()
+            .parent();
+          $draggableElements.append(
+            `<div data-ih-locale-title="DW" title="${_i18n("DW")}" class="IG_DWPROFILE">${SVG.DOWNLOAD}</div>`,
+          );
+          $draggableElements.css("position", "relative");
+          $nonDraggableElements.append(
+            `<div data-ih-locale-title="DW" title="${_i18n("DW")}" class="IG_DWPROFILE">${SVG.DOWNLOAD}</div>`,
+          );
+          $nonDraggableElements.css("position", "relative");
+        }, 150);
+      }
+    }
+  }
+
+  /**
+   * skipSharedWithYouDialog
+   * @description Auto-skip the "X shared this with you" dialog for ?igsh= links.
+   *
+   * @return {void}
+   */
+  function skipSharedWithYouDialog() {
+    if (!USER_SETTING.SKIP_SHARED_WITH_YOU_DIALOG) return;
+
+    let url;
+    try {
+      url = new URL(window.location.href);
+    } catch (e) {
+      logger("[skipSharedWithYouDialog] invalid URL", e);
+      return;
+    }
+
+    // only for shared links with the tracking param ?igsh=...
+    if (!url.searchParams || !url.searchParams.has("igsh")) return;
+
+    const $dialogs = $('div[role="dialog"]');
+    if (!$dialogs || !$dialogs.length) {
+      return;
+    }
+
+    const profileUsername = location.pathname
+      .split("/")
+      .filter((s) => s.length > 0)
+      .at(0)
+      ?.toLowerCase();
+
+    $dialogs.each(function () {
+      const $dialog = $(this);
+
+      if (!$dialog.is(":visible")) {
+        return;
+      }
+
+      const $headers = $dialog.find("h2");
+      if (!$headers.length) {
+        return;
+      }
+
+      // Heuristic: header text that looks like "profile_name shared this with you"
+      const isSharedHeader =
+        $headers.filter(function () {
+          const rawText = (this.textContent || "").trim().toLowerCase();
+          if (!rawText) return false;
+
+          // Typical case
+          if (rawText.includes("shared this with you")) return true;
+          if (rawText.includes("shared with you")) return true;
+
+          // Fallback: contains username + "shared"
+          if (
+            profileUsername &&
+            rawText.includes(profileUsername) &&
+            rawText.includes("shared")
+          ) {
+            return true;
+          }
+
+          return false;
+        }).length > 0;
+
+      if (!isSharedHeader) {
+        return;
+      }
+
+      const $buttons = $dialog.find('div[role="button"]');
+      if (!$buttons.length) {
+        logger("[skipSharedWithYouDialog] dialog has no buttons");
+        return;
+      }
+
+      let $notNow = null;
+
+      // Prefer a button whose text is exactly "Not now" (case-insensitive)
+      $buttons.each(function () {
+        const text = (this.textContent || "").trim().toLowerCase();
+        if (!text) return;
+
+        if (text === "not now") {
+          $notNow = $(this);
+          return false;
+        }
+      });
+
+      // Fallback: if there are exactly 2 buttons, assume the second is "Not now"
+      if ((!$notNow || !$notNow.length) && $buttons.length === 2) {
+        $notNow = $buttons.last();
+      }
+
+      if (!$notNow || !$notNow.length) {
+        logger('[skipSharedWithYouDialog] could not find "Not now" button');
+        return;
+      }
+
+      logger('[skipSharedWithYouDialog] clicking "Not now" button');
+      $notNow.trigger("click");
+    });
+  }
+
+  /**
+   * initMaximumReelPlayback
+   * @description Intercept playback of only the active Reel and replace its
+   * adaptive source with Instagram's best complete progressive representation.
+   * The original source is left untouched until metadata has been resolved.
+   *
+   * @return {void}
+   */
+  function initMaximumReelPlayback() {
+    const reelQuality = state.GL_reelQuality;
+
+    document.addEventListener("play", handleMaximumReelPlay, true);
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "hidden") {
+        const operation = reelQuality.activeOperation;
+        if (operation?.wantsPlayback) {
+          operation.nativeResumeOnce = true;
+          reelQuality.pendingNativeResume = operation;
+        }
+        cancelMaximumReelPlayback("document-hidden", false);
+      } else {
+        if (!resumeMaximumReelAfterVisibility()) scanForPlayingReels();
+      }
+    });
+
+    if (typeof IntersectionObserver === "function") {
+      reelQuality.intersectionObserver = new IntersectionObserver(
+        function (entries) {
+          const operation = reelQuality.activeOperation;
+          if (!operation || operation.finished) return;
+
+          const activeEntry = entries.find(
+            (entry) => entry.target === operation.video,
+          );
+          if (
+            activeEntry &&
+            (!activeEntry.isIntersecting || activeEntry.intersectionRatio < 0.5)
+          ) {
+            requestAnimationFrame(function () {
+              if (
+                reelQuality.activeOperation === operation &&
+                (!isActiveReelVideo(operation.video) ||
+                  getReelShortcodeForVideo(operation.video) !==
+                    operation.shortcode)
+              ) {
+                cancelMaximumReelPlayback("reel-left-viewport", false);
+              }
+            });
+          }
+        },
+        { threshold: [0, 0.5, 0.75, 1] },
+      );
+    }
+
+    reelQuality.mutationObserver = new MutationObserver(function (mutations) {
+      let removedOperation = null;
+      for (const mutation of mutations) {
+        mutation.addedNodes.forEach(function (node) {
+          observeMaximumReelVideos(node);
+        });
+
+        const operation = reelQuality.activeOperation;
+        if (!operation || operation.finished) continue;
+
+        mutation.removedNodes.forEach(function (node) {
+          if (
+            node === operation.video ||
+            (node.nodeType === Node.ELEMENT_NODE &&
+              node.contains(operation.video))
+          ) {
+            removedOperation = operation;
+          }
+        });
+      }
+
+      reelQuality.activeOperation?.hold?.sync?.();
+      if (removedOperation) {
+        queueMicrotask(function () {
+          if (
+            reelQuality.activeOperation === removedOperation &&
+            !removedOperation.video.isConnected
+          ) {
+            cancelMaximumReelPlayback("reel-video-removed", false);
+          }
+        });
+      }
+    });
+    reelQuality.mutationObserver.observe(document, {
+      childList: true,
+      subtree: true,
+    });
+
+    observeMaximumReelVideos(document);
+    requestAnimationFrame(scanForPlayingReels);
+    setTimeout(scanForPlayingReels, 500);
+  }
+
+  /**
+   * observeMaximumReelVideos
+   * @description Track video nodes without starting metadata prefetches.
+   *
+   * @param {Node} root
+   * @return {Boolean}
+   */
+  function observeMaximumReelVideos(root) {
+    if (!root || !root.querySelectorAll) return;
+
+    const videos = [];
+    if (root.nodeType === Node.ELEMENT_NODE && root.matches("video")) {
+      videos.push(root);
+    }
+    root.querySelectorAll("video").forEach((video) => videos.push(video));
+
+    videos.forEach(function (video) {
+      if (state.GL_reelQuality.observedVideos.has(video)) return;
+
+      state.GL_reelQuality.observedVideos.add(video);
+      state.GL_reelQuality.intersectionObserver?.observe(video);
+
+      if (!video.paused && !video.ended) {
+        queueMaximumReelScan();
+      }
+    });
+  }
+
+  /** @return {void} */
+  function queueMaximumReelScan() {
+    const reelQuality = state.GL_reelQuality;
+    if (reelQuality.scanQueued) return;
+
+    reelQuality.scanQueued = true;
+    queueMicrotask(function () {
+      reelQuality.scanQueued = false;
+      scanForPlayingReels();
+    });
+  }
+
+  /**
+   * scanForPlayingReels
+   * @description Catch a Reel that started before this document-start script
+   * finished loading its external dependencies.
+   *
+   * @return {void}
+   */
+  function scanForPlayingReels() {
+    const candidates = [];
+    document.querySelectorAll("video").forEach(function (video) {
+      observeMaximumReelVideos(video);
+      if (
+        !video.paused &&
+        !video.ended &&
+        isActiveReelVideo(video) &&
+        getReelShortcodeForVideo(video)
+      ) {
+        candidates.push(video);
+      }
+    });
+
+    candidates.sort(function (a, b) {
+      return maximumReelActivityScore(b) - maximumReelActivityScore(a);
+    });
+    if (candidates[0]) handleMaximumReelPlay({ target: candidates[0] });
+  }
+
+  /**
+   * resumeMaximumReelAfterVisibility
+   * @description Resume the native source once after a tab-background
+   * cancellation without immediately intercepting that recovery play event.
+   *
+   * @return {void}
+   */
+  function resumeMaximumReelAfterVisibility() {
+    const reelQuality = state.GL_reelQuality;
+    const operation = reelQuality.pendingNativeResume;
+    reelQuality.pendingNativeResume = null;
+    if (!operation) return false;
+
+    if (
+      operation.video.isConnected &&
+      getReelShortcodeForVideo(operation.video) === operation.shortcode &&
+      isActiveReelVideo(operation.video)
+    ) {
+      Promise.resolve(operation.video.play())
+        .then(function () {
+          operation.nativeResumeOnce = false;
+        })
+        .catch(function (err) {
+          operation.nativeResumeOnce = false;
+          logger(
+            "[Reel Quality] Native playback resume after background was blocked",
+            err?.name || "play_rejected",
+          );
+        });
+      return true;
+    } else {
+      operation.nativeResumeOnce = false;
+    }
+    return false;
+  }
+
+  /**
+   * handleMaximumReelPlay
+   * @description Capture a native play request before beginning the bounded HQ
+   * handoff. Repeated play events only preserve the user's playback intent.
+   *
+   * @param {Event|Object} event
+   * @return {void}
+   */
+  function handleMaximumReelPlay(event) {
+    const video = event?.target;
+    if (
+      !USER_SETTING.MAX_REEL_PLAYBACK_QUALITY ||
+      !(video instanceof HTMLVideoElement)
+    ) {
+      return;
+    }
+
+    const shortcode = getReelShortcodeForVideo(video);
+    if (!shortcode || !isActiveReelVideo(video)) return;
+
+    const now = Date.now();
+    const reelQuality = state.GL_reelQuality;
+    const previous = reelQuality.videoState.get(video);
+
+    if (
+      previous?.nativeResumeOnce &&
+      previous.shortcode === shortcode
+    ) {
+      previous.nativeResumeOnce = false;
+      return;
+    }
+
+    if (
+      previous?.phase === "ready" &&
+      previous.shortcode === shortcode &&
+      maximumReelSourceMatches(video, previous.selectedUrl)
+    ) {
+      return;
+    }
+
+    if (previous?.phase === "resolving" || previous?.phase === "loading") {
+      if (
+        previous.shortcode === shortcode &&
+        reelQuality.activeOperation === previous
+      ) {
+        previous.wantsPlayback = true;
+        try {
+          video.pause();
+        } catch (_err) {
+          // The element may have detached between the event and this handler.
+        }
+        return;
+      }
+
+      if (reelQuality.activeOperation === previous) {
+        abandonMaximumReelPlayback(previous, "video-reused-for-new-reel");
+      }
+    }
+
+    if (
+      previous?.phase === "fallback" &&
+      previous.shortcode === shortcode &&
+      now < previous.retryAt
+    ) {
+      return;
+    }
+
+    if (now < reelQuality.cooldownUntil) {
+      logger(
+        "[Reel Quality] Native playback; metadata cooldown active",
+        Math.ceil((reelQuality.cooldownUntil - now) / 1000),
+        "seconds remaining",
+      );
+      return;
+    }
+
+    const failedAt = reelQuality.failedAt.get(shortcode) || 0;
+    if (now - failedAt < REEL_QUALITY_FAILURE_RETRY_DELAY) return;
+
+    if (!registerMaximumReelBinding(shortcode)) {
+      reelQuality.failedAt.set(shortcode, now);
+      logger(
+        "[Reel Quality] Native playback; source rebind limit reached",
+        shortcode,
+      );
+      return;
+    }
+
+    startMaximumReelPlayback(video, shortcode);
+  }
+
+  /**
+   * startMaximumReelPlayback
+   * @description Pause and hold the active Reel while its progressive source is
+   * resolved. No metadata request is started for an inactive or next Reel.
+   *
+   * @param {HTMLVideoElement} video
+   * @param {String} shortcode
+   * @return {void}
+   */
+  function startMaximumReelPlayback(video, shortcode) {
+    const reelQuality = state.GL_reelQuality;
+    const activeOperation = reelQuality.activeOperation;
+    if (activeOperation && activeOperation.video !== video) {
+      if (activeOperation.shortcode === shortcode) {
+        abandonMaximumReelPlayback(
+          activeOperation,
+          "same-reel-video-replaced",
+          { keepRequest: true },
+        );
+      } else {
+        cancelMaximumReelPlayback("active-reel-changed", false);
+      }
+    }
+
+    const operation = {
+      deadline: Date.now() + REEL_QUALITY_HOLD_TIMEOUT,
+      candidateBound: false,
+      destructive: false,
+      finished: false,
+      generation: ++reelQuality.generation,
+      hold: null,
+      pendingWaitCancel: null,
+      phase: "resolving",
+      selectedUrl: null,
+      shortcode,
+      snapshot: snapshotMaximumReelVideo(video),
+      startedAt: performance.now(),
+      video,
+      wantsPlayback: true,
+    };
+
+    reelQuality.activeOperation = operation;
+    reelQuality.videoState.set(video, operation);
+
+    try {
+      video.pause();
+    } catch (_err) {
+      // The validity check in the async runner will fail open if it detached.
+    }
+    operation.hold = createMaximumReelHold(operation);
+    operation.hardTimeout = setTimeout(function () {
+      failMaximumReelPlayback(operation, "hold_timeout", {
+        markFailure: true,
+        resumeNative: true,
+      });
+    }, maximumReelTimeRemaining(operation));
+
+    logger("[Reel Quality] Resolving progressive sources", shortcode);
+    void runMaximumReelPlayback(operation);
+  }
+
+  /**
+   * runMaximumReelPlayback
+   * @description Resolve, rank, and try progressive candidates within one shared
+   * five-second deadline.
+   *
+   * @param {Object} operation
+   * @return {Promise<void>}
+   */
+  async function runMaximumReelPlayback(operation) {
+    try {
+      assertMaximumReelOperation(operation);
+      let resolution = await resolveMaximumReelCandidates(
+        operation,
+        false,
+        maximumReelTimeRemaining(operation),
+      );
+      assertMaximumReelOperation(operation);
+
+      let selected = await tryMaximumReelCandidates(
+        operation,
+        resolution.candidates,
+      );
+
+      if (
+        !selected &&
+        resolution.fromCache &&
+        maximumReelTimeRemaining(operation) > 700
+      ) {
+        state.GL_reelQuality.candidateCache.delete(operation.shortcode);
+        resolution = await resolveMaximumReelCandidates(
+          operation,
+          true,
+          maximumReelTimeRemaining(operation),
+        );
+        assertMaximumReelOperation(operation);
+        selected = await tryMaximumReelCandidates(
+          operation,
+          resolution.candidates,
+        );
+      }
+
+      if (!selected) {
+        throw createMaximumReelError(
+          "candidate_failure",
+          "No progressive candidate decoded before the hold deadline.",
+        );
+      }
+
+      finishMaximumReelPlayback(operation, selected);
+    } catch (err) {
+      if (operation.finished) return;
+
+      const reason = err?.code || "metadata_failure";
+      if (reason === "source_rebound") {
+        resumeMaximumReelCurrentSource(operation, reason);
+        return;
+      }
+      if (reason === "video_reused") {
+        abandonMaximumReelPlayback(operation, reason);
+        return;
+      }
+      if (err?.rateLimited) {
+        state.GL_reelQuality.cooldownUntil =
+          Date.now() + REEL_QUALITY_RATE_LIMIT_COOLDOWN;
+      }
+
+      failMaximumReelPlayback(operation, reason, {
+        markFailure:
+          reason !== "operation_cancelled" && reason !== "inactive_reel",
+        resumeNative: reason !== "inactive_reel",
+      });
+    }
+  }
+
+  /**
+   * resolveMaximumReelCandidates
+   * @description Fetch and memory-cache normalized progressive representations.
+   *
+   * @param {Object} operation
+   * @param {Boolean} force
+   * @param {Number} timeout
+   * @return {Promise<Object>}
+   */
+  async function resolveMaximumReelCandidates(operation, force, timeout) {
+    const reelQuality = state.GL_reelQuality;
+    const shortcode = operation.shortcode;
+    const now = Date.now();
+    const cached = reelQuality.candidateCache.get(shortcode);
+
+    if (
+      !force &&
+      cached &&
+      now - cached.createdAt < REEL_QUALITY_CACHE_MAX_AGE
+    ) {
+      logger(
+        "[Reel Quality] Using cached progressive metadata",
+        shortcode,
+        cached.candidates.length,
+        "candidates",
+      );
+      return { candidates: cached.candidates, fromCache: true };
+    }
+
+    if (now < reelQuality.cooldownUntil) {
+      throw createMaximumReelError(
+        "rate_limited",
+        "Instagram metadata requests are cooling down.",
+        true,
+      );
+    }
+
+    let requestRecord = reelQuality.activeRequest;
+    if (
+      requestRecord &&
+      (force || requestRecord.shortcode !== shortcode)
+    ) {
+      abortMaximumReelMetadataRequest();
+      requestRecord = null;
+    }
+
+    if (!requestRecord) {
+      requestRecord = { handle: null, promise: null, shortcode };
+      const request = getBlobMediaWithQueryID(shortcode, {
+        onRequest: function (handle) {
+          requestRecord.handle = handle;
+        },
+        silent: true,
+        timeout: Math.max(1, Math.floor(timeout)),
+      })
+        .then(function (data) {
+          const consumer = reelQuality.activeOperation;
+          if (
+            !consumer ||
+            consumer.finished ||
+            consumer.shortcode !== shortcode
+          ) {
+            throw createMaximumReelError(
+              "operation_cancelled",
+              "The metadata response no longer has an active Reel consumer.",
+            );
+          }
+          const candidates = normalizeMaximumReelCandidates(data);
+          if (!candidates.length) {
+            throw createMaximumReelError(
+              "empty_candidates",
+              "Instagram returned no complete progressive video source.",
+            );
+          }
+
+          reelQuality.candidateCache.set(shortcode, {
+            candidates,
+            createdAt: Date.now(),
+          });
+          logger(
+            "[Reel Quality] Progressive metadata resolved",
+            shortcode,
+            candidates.map((candidate) => ({
+              bandwidth: candidate.bandwidth,
+              height: candidate.height,
+              width: candidate.width,
+            })),
+          );
+          return candidates;
+        })
+        .finally(function () {
+          if (reelQuality.activeRequest === requestRecord) {
+            reelQuality.activeRequest = null;
+          }
+        });
+      requestRecord.promise = request;
+      reelQuality.activeRequest = requestRecord;
+    }
+
+    const candidates = await requestRecord.promise;
+    return { candidates, fromCache: false };
+  }
+
+  /**
+   * normalizeMaximumReelCandidates
+   * @description Normalize and rank complete progressive representations. The
+   * XDT video_versions list is used before the single video_url fallback.
+   *
+   * @param {Object} data
+   * @return {Array<Object>}
+   */
+  function normalizeMaximumReelCandidates(data) {
+    const item =
+      data?.xdt_api__v1__media__shortcode__web_info?.items?.[0] ||
+      data?.shortcode_media ||
+      data?.items?.[0] ||
+      data;
+    const versions = Array.isArray(item?.video_versions)
+      ? item.video_versions
+      : [];
+    const rawCandidates = versions.length
+      ? versions
+      : item?.video_url
+        ? [{
+            url: item.video_url,
+            width: item.original_width,
+            height: item.original_height,
+          }]
+        : [];
+    const seen = new Set();
+
+    return rawCandidates
+      .map(function (candidate, index) {
+        const url = candidate?.url || candidate?.video_url || candidate?.src;
+        let parsed;
+        try {
+          parsed = new URL(url);
+        } catch (_err) {
+          return null;
+        }
+        if (parsed.protocol !== "https:" || seen.has(parsed.href)) return null;
+        seen.add(parsed.href);
+
+        const width = maximumReelNumber(
+          candidate.width ?? candidate.config_width ?? item?.original_width,
+        );
+        const height = maximumReelNumber(
+          candidate.height ?? candidate.config_height ?? item?.original_height,
+        );
+        const bandwidth = maximumReelNumber(
+          candidate.bandwidth ??
+            candidate.bitrate ??
+            candidate.video_bandwidth,
+        );
+
+        return {
+          area: width * height,
+          bandwidth,
+          height,
+          index,
+          shortSide: Math.min(width, height),
+          url: parsed.href,
+          width,
+        };
+      })
+      .filter(Boolean)
+      .sort(function (a, b) {
+        return (
+          b.shortSide - a.shortSide ||
+          b.area - a.area ||
+          b.bandwidth - a.bandwidth ||
+          a.index - b.index
+        );
+      });
+  }
+
+  /**
+   * tryMaximumReelCandidates
+   * @description Try ranked sources in order, reserving part of the shared
+   * deadline for lower-ranked Safari-compatible fallbacks.
+   *
+   * @param {Object} operation
+   * @param {Array<Object>} candidates
+   * @return {Promise<Object|null>}
+   */
+  async function tryMaximumReelCandidates(operation, candidates) {
+    for (let index = 0; index < candidates.length; index++) {
+      assertMaximumReelOperation(operation);
+      const remaining = maximumReelTimeRemaining(operation);
+      if (remaining <= 0) break;
+
+      const remainingCandidates = candidates.length - index - 1;
+      const reserve = Math.min(
+        remainingCandidates * 600,
+        Math.max(0, remaining - 800),
+      );
+      const candidateDeadline = Math.min(
+        operation.deadline,
+        Date.now() + Math.max(1, remaining - reserve),
+      );
+      const candidate = candidates[index];
+
+      try {
+        await loadMaximumReelCandidate(
+          operation,
+          candidate,
+          candidateDeadline,
+        );
+        return candidate;
+      } catch (err) {
+        assertMaximumReelOperation(operation);
+        if (
+          err?.code === "operation_cancelled" ||
+          err?.code === "inactive_reel" ||
+          err?.code === "source_rebound" ||
+          err?.code === "video_reused"
+        ) {
+          throw err;
+        }
+        logger(
+          "[Reel Quality] Progressive candidate rejected",
+          {
+            height: candidate.height,
+            reason: err?.code || "media_error",
+            width: candidate.width,
+          },
+        );
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * loadMaximumReelCandidate
+   * @description Bind one direct source to the same video, restore the playback
+   * position, and wait until Safari reports a decoded frame.
+   *
+   * @param {Object} operation
+   * @param {Object} candidate
+   * @param {Number} candidateDeadline
+   * @return {Promise<void>}
+   */
+  async function loadMaximumReelCandidate(
+    operation,
+    candidate,
+    candidateDeadline,
+  ) {
+    const video = operation.video;
+    operation.phase = "loading";
+    operation.destructive = true;
+    operation.candidateBound = false;
+    operation.selectedUrl = candidate.url;
+
+    const metadataReady = waitForMaximumReelVideo(
+      operation,
+      ["loadedmetadata"],
+      function () {
+        return video.readyState >= HTMLMediaElement.HAVE_METADATA;
+      },
+      candidateDeadline,
+      "metadata_timeout",
+      false,
+    );
+
+    try {
+      video.pause();
+      video.autoplay = false;
+      video.removeAttribute("autoplay");
+      if ("srcObject" in video) video.srcObject = null;
+      operation.snapshot.sourceElements.forEach(function (source) {
+        if (source.element.parentElement === video) {
+          source.element.removeAttribute("src");
+        }
+      });
+      video.setAttribute("preload", "auto");
+      video.setAttribute("playsinline", "");
+      video.setAttribute("webkit-playsinline", "");
+      video.setAttribute("src", candidate.url);
+      operation.candidateBound = true;
+      video.load();
+    } catch (err) {
+      operation.pendingWaitCancel?.();
+      try {
+        await metadataReady;
+      } catch (_cancelledError) {
+        // Consume the cancelled waiter before reporting the bind failure.
+      }
+      throw createMaximumReelError(
+        "source_bind_failure",
+        err?.message || "The progressive source could not be attached.",
+      );
+    }
+
+    await metadataReady;
+    assertMaximumReelOperation(operation);
+
+    const targetTime = maximumReelSeekTime(
+      operation.snapshot.currentTime,
+      video.duration,
+    );
+    if (targetTime > 0) {
+      try {
+        video.currentTime = targetTime;
+      } catch (_err) {
+        // A candidate can still be used if Safari declines the initial seek.
+      }
+    }
+
+    await waitForMaximumReelVideo(
+      operation,
+      ["loadeddata", "canplay", "seeked"],
+      function () {
+        return (
+          !video.seeking &&
+          video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
+          video.videoWidth > 0 &&
+          video.videoHeight > 0
+        );
+      },
+      candidateDeadline,
+      "frame_timeout",
+      true,
+    );
+  }
+
+  /**
+   * waitForMaximumReelVideo
+   * @description Wait for a media state with cancellation, error, and a bounded
+   * deadline. URLs are intentionally omitted from diagnostics.
+   *
+   * @return {Promise<void>}
+   */
+  function waitForMaximumReelVideo(
+    operation,
+    eventNames,
+    predicate,
+    deadline,
+    timeoutCode,
+    checkImmediately,
+  ) {
+    return new Promise(function (resolve, reject) {
+      const video = operation.video;
+      let settled = false;
+      let timer = null;
+
+      function cleanup() {
+        eventNames.forEach((name) => video.removeEventListener(name, onReady));
+        video.removeEventListener("error", onError);
+        if (timer) clearTimeout(timer);
+        if (operation.pendingWaitCancel === onCancel) {
+          operation.pendingWaitCancel = null;
+        }
+      }
+
+      function finish(callback, value) {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        callback(value);
+      }
+
+      function onReady() {
+        try {
+          assertMaximumReelOperation(operation);
+          if (predicate()) finish(resolve);
+        } catch (err) {
+          finish(reject, err);
+        }
+      }
+
+      function onError() {
+        finish(
+          reject,
+          createMaximumReelError(
+            "media_error",
+            video.error?.message || "Safari rejected the progressive source.",
+          ),
+        );
+      }
+
+      function onCancel() {
+        finish(
+          reject,
+          createMaximumReelError(
+            "operation_cancelled",
+            "The active Reel changed during source loading.",
+          ),
+        );
+      }
+
+      eventNames.forEach((name) => video.addEventListener(name, onReady));
+      video.addEventListener("error", onError);
+      operation.pendingWaitCancel = onCancel;
+
+      const delay = Math.max(0, deadline - Date.now());
+      timer = setTimeout(function () {
+        finish(
+          reject,
+          createMaximumReelError(
+            timeoutCode,
+            "The progressive source did not become ready in time.",
+          ),
+        );
+      }, delay);
+
+      if (checkImmediately) onReady();
+    });
+  }
+
+  /**
+   * finishMaximumReelPlayback
+   * @description Reveal the decoded direct source and honor the last native
+   * playback request if the same Reel is still active.
+   *
+   * @param {Object} operation
+   * @param {Object} candidate
+   * @return {void}
+   */
+  function finishMaximumReelPlayback(operation, candidate) {
+    assertMaximumReelOperation(operation);
+    if (operation.hardTimeout) clearTimeout(operation.hardTimeout);
+    operation.finished = true;
+    operation.phase = "ready";
+    operation.selectedUrl = candidate.url;
+    operation.retryAt = 0;
+
+    restoreMaximumReelSourceElements(operation.snapshot);
+    restoreMaximumReelPlaybackProperties(operation.video, operation.snapshot);
+    cleanupMaximumReelHold(operation);
+
+    const reelQuality = state.GL_reelQuality;
+    reelQuality.failedAt.delete(operation.shortcode);
+    reelQuality.videoState.set(operation.video, operation);
+    if (reelQuality.activeOperation === operation) {
+      reelQuality.activeOperation = null;
+    }
+
+    operation.video.dataset.instaControlsReelQuality =
+      `${operation.video.videoWidth}x${operation.video.videoHeight}`;
+    logger(
+      "[Reel Quality] Maximum progressive source ready",
+      operation.shortcode,
+      {
+        decodedHeight: operation.video.videoHeight,
+        decodedWidth: operation.video.videoWidth,
+        elapsedMs: Math.round(performance.now() - operation.startedAt),
+        reportedHeight: candidate.height,
+        reportedWidth: candidate.width,
+      },
+    );
+
+    if (
+      operation.wantsPlayback &&
+      USER_SETTING.MAX_REEL_PLAYBACK_QUALITY &&
+      operation.video.isConnected &&
+      getReelShortcodeForVideo(operation.video) === operation.shortcode &&
+      isActiveReelVideo(operation.video)
+    ) {
+      Promise.resolve(operation.video.play()).catch(function (err) {
+        logger(
+          "[Reel Quality] Maximum source loaded but autoplay was blocked",
+          err?.name || "play_rejected",
+        );
+      });
+    }
+  }
+
+  /**
+   * failMaximumReelPlayback
+   * @description Remove the hold and fail open to the native source. Source
+   * restoration is only needed after the first destructive load().
+   *
+   * @param {Object} operation
+   * @param {String} reason
+   * @param {Object} options
+   * @return {void}
+   */
+  function failMaximumReelPlayback(operation, reason, options = {}) {
+    if (!operation || operation.finished) return;
+
+    if (operation.hardTimeout) clearTimeout(operation.hardTimeout);
+    operation.finished = true;
+    operation.pendingWaitCancel?.();
+    operation.pendingWaitCancel = null;
+    abortMaximumReelMetadataRequest(operation);
+
+    const reelQuality = state.GL_reelQuality;
+    if (options.markFailure) {
+      reelQuality.failedAt.set(operation.shortcode, Date.now());
+      reelQuality.candidateCache.delete(operation.shortcode);
+    }
+
+    const canResume =
+      options.resumeNative &&
+      operation.wantsPlayback &&
+      operation.video.isConnected &&
+      getReelShortcodeForVideo(operation.video) === operation.shortcode &&
+      isActiveReelVideo(operation.video);
+
+    let restored = true;
+    if (operation.destructive) {
+      restored = restoreMaximumReelNativeSource(operation);
+    } else {
+      restoreMaximumReelPlaybackProperties(operation.video, operation.snapshot);
+    }
+
+    operation.phase = options.markFailure ? "fallback" : "native";
+    operation.retryAt = options.markFailure
+      ? Date.now() + REEL_QUALITY_FAILURE_RETRY_DELAY
+      : 0;
+    reelQuality.videoState.set(operation.video, operation);
+    cleanupMaximumReelHold(operation);
+
+    if (reelQuality.activeOperation === operation) {
+      reelQuality.activeOperation = null;
+    }
+
+    logger("[Reel Quality] Native playback fallback", operation.shortcode, {
+      elapsedMs: Math.round(performance.now() - operation.startedAt),
+      reason,
+      restored,
+    });
+
+    if (canResume && restored) {
+      Promise.resolve(operation.video.play()).catch(function (err) {
+        logger(
+          "[Reel Quality] Native playback resume was blocked",
+          err?.name || "play_rejected",
+        );
+      });
+    }
+  }
+
+  /**
+   * cancelMaximumReelPlayback
+   * @description Invalidate the current hold immediately, including when the
+   * preference is switched off.
+   *
+   * @param {String} reason
+   * @param {Boolean} resumeNative
+   * @return {void}
+   */
+  function cancelMaximumReelPlayback(reason, resumeNative = true) {
+    const operation = state.GL_reelQuality.activeOperation;
+    if (!operation) return;
+
+    if (reason === "reel-video-removed") {
+      abandonMaximumReelPlayback(operation, reason);
+      return;
+    }
+
+    failMaximumReelPlayback(operation, reason, {
+      markFailure: false,
+      resumeNative,
+    });
+  }
+
+  /**
+   * abandonMaximumReelPlayback
+   * @description Drop stale work when React reuses the same video for another
+   * Reel. Restoring the old snapshot here would overwrite the new native source.
+   *
+   * @param {Object} operation
+   * @param {String} reason
+   * @param {Object} options
+   * @return {void}
+   */
+  function abandonMaximumReelPlayback(operation, reason, options = {}) {
+    if (!operation || operation.finished) return;
+
+    if (operation.hardTimeout) clearTimeout(operation.hardTimeout);
+    operation.finished = true;
+    operation.phase = "native";
+    operation.pendingWaitCancel?.();
+    operation.pendingWaitCancel = null;
+    if (!options.keepRequest) abortMaximumReelMetadataRequest(operation);
+    clearHTML5VideoAudioHandoff(operation.video);
+    cleanupMaximumReelHold(operation);
+
+    const reelQuality = state.GL_reelQuality;
+    if (reelQuality.activeOperation === operation) {
+      reelQuality.activeOperation = null;
+    }
+    logger("[Reel Quality] Abandoned stale player state", reason);
+  }
+
+  /**
+   * resumeMaximumReelCurrentSource
+   * @description Respect a new source installed by Instagram during the handoff.
+   * The old source snapshot is deliberately not restored.
+   *
+   * @param {Object} operation
+   * @param {String} reason
+   * @return {void}
+   */
+  function resumeMaximumReelCurrentSource(operation, reason) {
+    if (!operation || operation.finished) return;
+
+    if (operation.hardTimeout) clearTimeout(operation.hardTimeout);
+    operation.finished = true;
+    operation.phase = "native";
+    operation.nativeResumeOnce = true;
+    operation.pendingWaitCancel?.();
+    operation.pendingWaitCancel = null;
+    abortMaximumReelMetadataRequest(operation);
+    restoreMaximumReelPlaybackProperties(operation.video, operation.snapshot);
+    cleanupMaximumReelHold(operation);
+
+    const reelQuality = state.GL_reelQuality;
+    reelQuality.videoState.set(operation.video, operation);
+    if (reelQuality.activeOperation === operation) {
+      reelQuality.activeOperation = null;
+    }
+
+    const canResume =
+      operation.wantsPlayback &&
+      operation.video.isConnected &&
+      getReelShortcodeForVideo(operation.video) === operation.shortcode &&
+      isActiveReelVideo(operation.video);
+    logger("[Reel Quality] Accepted Instagram source replacement", reason);
+
+    if (canResume) {
+      Promise.resolve(operation.video.play())
+        .then(function () {
+          operation.nativeResumeOnce = false;
+        })
+        .catch(function (err) {
+          operation.nativeResumeOnce = false;
+          logger(
+            "[Reel Quality] Replacement source resume was blocked",
+            err?.name || "play_rejected",
+          );
+        });
+    } else {
+      operation.nativeResumeOnce = false;
+    }
+  }
+
+  /**
+   * abortMaximumReelMetadataRequest
+   * @description Keep automatic metadata traffic to one active shortcode.
+   *
+   * @param {Object} operation
+   * @return {void}
+   */
+  function abortMaximumReelMetadataRequest(operation) {
+    const reelQuality = state.GL_reelQuality;
+    const request = reelQuality.activeRequest;
+    if (!request || (operation && request.shortcode !== operation.shortcode)) {
+      return;
+    }
+
+    reelQuality.activeRequest = null;
+    try {
+      request.handle?.abort?.();
+    } catch (_err) {
+      // A request that completed between the check and abort is already harmless.
+    }
+  }
+
+  /**
+   * restoreMaximumReelNativeSource
+   * @description Best-effort restoration after a direct source called load().
+   * Instagram may instead remount its player if a blob MediaSource has expired.
+   *
+   * @param {Object} operation
+   * @return {Boolean}
+   */
+  function restoreMaximumReelNativeSource(operation) {
+    const video = operation.video;
+    const snapshot = operation.snapshot;
+    let hasSource = false;
+
+    try {
+      video.pause();
+      video.removeAttribute("src");
+      restoreMaximumReelSourceElements(snapshot);
+
+      if (snapshot.srcObject != null && "srcObject" in video) {
+        video.srcObject = snapshot.srcObject;
+        hasSource = true;
+      } else if (snapshot.srcAttribute != null) {
+        video.setAttribute("src", snapshot.srcAttribute);
+        hasSource = true;
+      } else if (
+        snapshot.sourceElements.some(
+          (source) =>
+            source.parent === video &&
+            source.element.parentElement === video &&
+            source.src != null,
+        )
+      ) {
+        hasSource = true;
+      } else if (
+        snapshot.currentSrc &&
+        snapshot.currentSrc !== operation.selectedUrl
+      ) {
+        video.setAttribute("src", snapshot.currentSrc);
+        hasSource = true;
+      }
+
+      restoreMaximumReelPlaybackProperties(video, snapshot);
+      if (hasSource) {
+        video.load();
+        const restoreTime = function () {
+          try {
+            video.currentTime = maximumReelSeekTime(
+              snapshot.currentTime,
+              video.duration,
+            );
+          } catch (_err) {
+            // Native playback can continue even when its old position is stale.
+          }
+        };
+        if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
+          restoreTime();
+        } else {
+          video.addEventListener("loadedmetadata", restoreTime, { once: true });
+        }
+      }
+    } catch (err) {
+      logger(
+        "[Reel Quality] Native source restoration deferred to Instagram",
+        err?.name || "restore_failure",
+      );
+      return false;
+    }
+
+    return hasSource;
+  }
+
+  /**
+   * snapshotMaximumReelVideo
+   * @description Capture source declarations and user-visible playback state.
+   *
+   * @param {HTMLVideoElement} video
+   * @return {Object}
+   */
+  function snapshotMaximumReelVideo(video) {
+    const preservedAudio =
+      beginHTML5VideoAudioHandoff(video) ||
+      getPreservedHTML5VideoAudioState(video);
+    let srcObject = null;
+    try {
+      srcObject = "srcObject" in video ? video.srcObject : null;
+    } catch (_err) {
+      // Some WebKit media objects reject inspection while being detached.
+    }
+
+    const sourceElements = Array.from(video.children)
+      .filter((element) => element.tagName === "SOURCE")
+      .map(function (element) {
+        return {
+          attributes: Array.from(element.attributes).map((attribute) => ({
+            name: attribute.name,
+            value: attribute.value,
+          })),
+          element,
+          parent: video,
+          src: element.getAttribute("src"),
+        };
+      });
+
+    return {
+      autoplayAttribute: video.getAttribute("autoplay"),
+      autoplay: video.autoplay,
+      controls: video.controls,
+      currentSrc: video.currentSrc,
+      currentTime: Number.isFinite(video.currentTime) ? video.currentTime : 0,
+      defaultMuted: preservedAudio ? preservedAudio.muted : video.defaultMuted,
+      defaultPlaybackRate: video.defaultPlaybackRate,
+      loop: video.loop,
+      muted: preservedAudio ? preservedAudio.muted : video.muted,
+      playbackRate: video.playbackRate,
+      playsInlineAttribute: video.getAttribute("playsinline"),
+      playsInline: video.playsInline,
+      preloadAttribute: video.getAttribute("preload"),
+      sourceElements,
+      srcAttribute: video.getAttribute("src"),
+      srcObject,
+      volume: preservedAudio ? preservedAudio.volume : video.volume,
+      webkitPlaysInlineAttribute: video.getAttribute("webkit-playsinline"),
+    };
+  }
+
+  /**
+   * restoreMaximumReelPlaybackProperties
+   * @description Restore playback behavior without replacing the selected source.
+   *
+   * @param {HTMLVideoElement} video
+   * @param {Object} snapshot
+   * @return {void}
+   */
+  function restoreMaximumReelPlaybackProperties(video, snapshot) {
+    try {
+      restoreMaximumReelAttribute(
+        video,
+        "autoplay",
+        snapshot.autoplayAttribute,
+      );
+      restoreMaximumReelAttribute(
+        video,
+        "playsinline",
+        snapshot.playsInlineAttribute,
+      );
+      restoreMaximumReelAttribute(
+        video,
+        "webkit-playsinline",
+        snapshot.webkitPlaysInlineAttribute,
+      );
+      restoreMaximumReelAttribute(
+        video,
+        "preload",
+        snapshot.preloadAttribute,
+      );
+      video.autoplay = snapshot.autoplay;
+      const nativeControlsRecord = state.GL_nativeControls.records.get(video);
+      const preservedAudio = getPreservedHTML5VideoAudioState(video, {
+        muted: snapshot.muted,
+        volume: snapshot.volume,
+      });
+      video.controls =
+        USER_SETTING.HTML5_VIDEO_CONTROL && nativeControlsRecord?.active
+          ? true
+          : snapshot.controls;
+      video.defaultMuted = preservedAudio
+        ? preservedAudio.muted
+        : snapshot.defaultMuted;
+      video.defaultPlaybackRate = snapshot.defaultPlaybackRate;
+      video.loop = snapshot.loop;
+      video.muted = preservedAudio ? preservedAudio.muted : snapshot.muted;
+      video.playbackRate = snapshot.playbackRate;
+      video.playsInline = snapshot.playsInline;
+      video.volume = preservedAudio ? preservedAudio.volume : snapshot.volume;
+      if (nativeControlsRecord?.active && preservedAudio) {
+        nativeControlsRecord.audioState = preservedAudio;
+        nativeControlsRecord.audioStateUpdatedAt = performance.now();
+        clearHTML5VideoAudioHandoff(video, 500);
+      }
+    } catch (err) {
+      logger(
+        "[Reel Quality] Some playback properties could not be restored",
+        err?.name || "property_restore_failure",
+      );
+    }
+  }
+
+  /**
+   * restoreMaximumReelSourceElements
+   * @description Restore exact child source declarations removed for the direct
+   * progressive source.
+   *
+   * @param {Object} snapshot
+   * @return {void}
+   */
+  function restoreMaximumReelSourceElements(snapshot) {
+    snapshot.sourceElements.forEach(function (source) {
+      if (source.element.parentElement !== source.parent) return;
+
+      Array.from(source.element.attributes).forEach((attribute) => {
+        source.element.removeAttribute(attribute.name);
+      });
+      source.attributes.forEach((attribute) => {
+        source.element.setAttribute(attribute.name, attribute.value);
+      });
+    });
+  }
+
+  /**
+   * createMaximumReelHold
+   * @description Add a viewport-fixed, pointer-transparent poster hold without
+   * changing Instagram's player or control positioning.
+   *
+   * @param {Object} operation
+   * @return {Object|null}
+   */
+  function createMaximumReelHold(operation) {
+    const video = operation.video;
+    const host = document.documentElement;
+    if (!host) return null;
+
+    const previousOwner = state.GL_reelQuality.hostOwners.get(host);
+    if (previousOwner && previousOwner !== operation) {
+      cleanupMaximumReelHold(previousOwner);
+    }
+
+    const overlay = document.createElement("div");
+    overlay.className = "insta-controls-reel-quality-hold";
+    overlay.setAttribute("aria-hidden", "true");
+
+    const poster = findMaximumReelPoster(video);
+    if (poster) {
+      const image = document.createElement("img");
+      image.alt = "";
+      image.src = poster;
+      overlay.appendChild(image);
+    }
+
+    const spinner = document.createElement("div");
+    spinner.className = "insta-controls-reel-quality-spinner";
+    overlay.appendChild(spinner);
+    host.appendChild(overlay);
+
+    let syncFrame = null;
+    const render = function () {
+      syncFrame = null;
+      if (!video.isConnected) return;
+      const rect = video.getBoundingClientRect();
+      overlay.style.left = `${rect.left}px`;
+      overlay.style.top = `${rect.top}px`;
+      overlay.style.width = `${rect.width}px`;
+      overlay.style.height = `${rect.height}px`;
+    };
+    const sync = function () {
+      if (syncFrame != null) return;
+      syncFrame = requestAnimationFrame(render);
+    };
+    render();
+    window.addEventListener("scroll", sync, true);
+    window.addEventListener("resize", sync);
+
+    state.GL_reelQuality.hostOwners.set(host, operation);
+    return {
+      cancelSync: function () {
+        if (syncFrame != null) cancelAnimationFrame(syncFrame);
+        syncFrame = null;
+      },
+      host,
+      overlay,
+      sync,
+    };
+  }
+
+  /**
+   * cleanupMaximumReelHold
+   * @description Remove only the hold owned by this operation and undo its exact
+   * temporary inline positioning change.
+   *
+   * @param {Object} operation
+   * @return {void}
+   */
+  function cleanupMaximumReelHold(operation) {
+    const hold = operation?.hold;
+    if (!hold) return;
+
+    const ownsHost =
+      state.GL_reelQuality.hostOwners.get(hold.host) === operation;
+    if (ownsHost) {
+      hold.overlay.remove();
+      hold.cancelSync();
+      window.removeEventListener("scroll", hold.sync, true);
+      window.removeEventListener("resize", hold.sync);
+      state.GL_reelQuality.hostOwners.delete(hold.host);
+    }
+    operation.hold = null;
+  }
+
+  /**
+   * findMaximumReelPoster
+   * @description Prefer the video's poster, then the largest overlapping image
+   * in its nearby Reel container.
+   *
+   * @param {HTMLVideoElement} video
+   * @return {String|null}
+   */
+  function findMaximumReelPoster(video) {
+    if (video.poster) return video.poster;
+
+    const videoRect = video.getBoundingClientRect();
+    let scope = video.parentElement;
+    let best = null;
+    for (let depth = 0; scope && depth < 5; depth++, scope = scope.parentElement) {
+      scope.querySelectorAll("img").forEach(function (image) {
+        const rect = image.getBoundingClientRect();
+        const overlapWidth = Math.max(
+          0,
+          Math.min(rect.right, videoRect.right) -
+            Math.max(rect.left, videoRect.left),
+        );
+        const overlapHeight = Math.max(
+          0,
+          Math.min(rect.bottom, videoRect.bottom) -
+            Math.max(rect.top, videoRect.top),
+        );
+        const score = overlapWidth * overlapHeight;
+        const src = image.currentSrc || image.src;
+        if (src && score > (best?.score || 0)) best = { score, src };
+      });
+      if (best?.score > videoRect.width * videoRect.height * 0.5) break;
+    }
+    return best?.src || null;
+  }
+
+  /**
+   * getReelShortcodeForVideo
+   * @description Resolve identity from the video's nearest container before the
+   * direct Reel route fallback. Ordinary posts and Reels audio pages are ignored.
+   *
+   * @param {HTMLVideoElement} video
+   * @return {String|null}
+   */
+  function getReelShortcodeForVideo(video) {
+    const enclosingLink = video.closest(
+      'a[href*="/reel/"], a[href*="/reels/"]',
+    );
+    const enclosingShortcode = parseMaximumReelShortcode(
+      enclosingLink?.href,
+      false,
+    );
+    if (enclosingShortcode) return enclosingShortcode;
+
+    const boundary = video.closest(
+      'article, div[role="dialog"], [data-pagelet]',
+    );
+    if (boundary) {
+      const shortcodes = [
+        ...new Set(
+          Array.from(
+            boundary.querySelectorAll(
+              'a[href*="/reel/"], a[href*="/reels/"]',
+            ),
+          )
+            .map((anchor) => parseMaximumReelShortcode(anchor.href, false))
+            .filter(Boolean),
+        ),
+      ];
+      if (shortcodes.length === 1) return shortcodes[0];
+
+      const routeShortcode = parseMaximumReelShortcode(location.href, true);
+      if (routeShortcode && shortcodes.includes(routeShortcode)) {
+        return routeShortcode;
+      }
+    }
+
+    return parseMaximumReelShortcode(location.href, true);
+  }
+
+  /**
+   * parseMaximumReelShortcode
+   * @description Parse exact Reel route segments and reject reserved collections.
+   *
+   * @param {String} value
+   * @param {Boolean} directOnly
+   * @return {String|null}
+   */
+  function parseMaximumReelShortcode(value, directOnly) {
+    let url;
+    try {
+      url = new URL(value, location.origin);
+    } catch (_err) {
+      return null;
+    }
+
+    if (
+      url.hostname !== location.hostname &&
+      url.hostname !== "instagram.com" &&
+      !url.hostname.endsWith(".instagram.com")
+    ) {
+      return null;
+    }
+
+    const segments = url.pathname.split("/").filter(Boolean);
+    let route = null;
+    let shortcode = null;
+
+    if (
+      ["reel", "reels"].includes(segments[0]?.toLowerCase()) &&
+      (segments.length === 2 ||
+        (directOnly &&
+          segments.length === 3 &&
+          segments[2].toLowerCase() === "embed"))
+    ) {
+      route = segments[0].toLowerCase();
+      shortcode = segments[1];
+    } else if (
+      segments.length === 3 &&
+      /^[A-Za-z0-9._]+$/.test(segments[0]) &&
+      ["reel", "reels"].includes(segments[1]?.toLowerCase())
+    ) {
+      route = segments[1].toLowerCase();
+      shortcode = segments[2];
+    }
+
+    if (!route || !shortcode) return null;
+    if (
+      route === "reels" &&
+      ["audio", "explore", "saved"].includes(shortcode.toLowerCase())
+    ) {
+      return null;
+    }
+    return /^[A-Za-z0-9_-]{5,64}$/.test(shortcode) ? shortcode : null;
+  }
+
+  /**
+   * isActiveReelVideo
+   * @description Synchronously require a substantially visible, connected player.
+   *
+   * @param {HTMLVideoElement} video
+   * @return {Boolean}
+   */
+  function isActiveReelVideo(video) {
+    if (!video?.isConnected || document.visibilityState === "hidden") return false;
+
+    const rect = video.getBoundingClientRect();
+    if (rect.width < 32 || rect.height < 32) return false;
+
+    let clipLeft = 0;
+    let clipTop = 0;
+    let clipRight = innerWidth;
+    let clipBottom = innerHeight;
+    let element = video;
+
+    while (element && element.nodeType === Node.ELEMENT_NODE) {
+      const style = getComputedStyle(element);
+      if (
+        element.hidden ||
+        element.hasAttribute("inert") ||
+        element.getAttribute("aria-hidden") === "true" ||
+        style.display === "none" ||
+        style.visibility === "hidden" ||
+        style.visibility === "collapse" ||
+        style.contentVisibility === "hidden" ||
+        Number(style.opacity) <= 0.01
+      ) {
+        return false;
+      }
+
+      if (element !== video) {
+        const clipsX = /^(auto|scroll|hidden|clip)$/.test(style.overflowX);
+        const clipsY = /^(auto|scroll|hidden|clip)$/.test(style.overflowY);
+        if (clipsX || clipsY) {
+          const ancestorRect = element.getBoundingClientRect();
+          if (clipsX) {
+            clipLeft = Math.max(clipLeft, ancestorRect.left);
+            clipRight = Math.min(clipRight, ancestorRect.right);
+          }
+          if (clipsY) {
+            clipTop = Math.max(clipTop, ancestorRect.top);
+            clipBottom = Math.min(clipBottom, ancestorRect.bottom);
+          }
+        }
+      }
+      element = element.parentElement;
+    }
+
+    const visibleWidth = Math.max(
+      0,
+      Math.min(rect.right, clipRight) - Math.max(rect.left, clipLeft),
+    );
+    const visibleHeight = Math.max(
+      0,
+      Math.min(rect.bottom, clipBottom) - Math.max(rect.top, clipTop),
+    );
+    return (visibleWidth * visibleHeight) / (rect.width * rect.height) >= 0.55;
+  }
+
+  /**
+   * assertMaximumReelOperation
+   * @description Reject stale work at every asynchronous boundary.
+   *
+   * @param {Object} operation
+   * @return {void}
+   */
+  function assertMaximumReelOperation(operation) {
+    if (
+      operation.finished ||
+      state.GL_reelQuality.generation !== operation.generation ||
+      state.GL_reelQuality.activeOperation !== operation ||
+      state.GL_reelQuality.videoState.get(operation.video) !== operation ||
+      !USER_SETTING.MAX_REEL_PLAYBACK_QUALITY
+    ) {
+      throw createMaximumReelError(
+        "operation_cancelled",
+        "The Reel quality operation is no longer current.",
+      );
+    }
+    if (
+      operation.destructive &&
+      operation.candidateBound &&
+      operation.selectedUrl &&
+      !maximumReelSourceMatches(operation.video, operation.selectedUrl)
+    ) {
+      throw createMaximumReelError(
+        "source_rebound",
+        "Instagram replaced the progressive source during the handoff.",
+      );
+    }
+
+    const currentShortcode = getReelShortcodeForVideo(operation.video);
+    if (
+      operation.video.isConnected &&
+      currentShortcode &&
+      currentShortcode !== operation.shortcode
+    ) {
+      throw createMaximumReelError(
+        "video_reused",
+        "Instagram reused the player for a different Reel.",
+      );
+    }
+    if (
+      !operation.video.isConnected ||
+      !isActiveReelVideo(operation.video) ||
+      currentShortcode !== operation.shortcode
+    ) {
+      throw createMaximumReelError(
+        "inactive_reel",
+        "The original Reel is no longer active.",
+      );
+    }
+    if (maximumReelTimeRemaining(operation) <= 0) {
+      throw createMaximumReelError(
+        "hold_timeout",
+        "The Reel quality hold reached its total deadline.",
+      );
+    }
+  }
+
+  /** @return {Number} */
+  function maximumReelTimeRemaining(operation) {
+    return Math.max(0, operation.deadline - Date.now());
+  }
+
+  /** @return {Number} */
+  function maximumReelActivityScore(video) {
+    const rect = video.getBoundingClientRect();
+    const visibleWidth = Math.max(
+      0,
+      Math.min(rect.right, innerWidth) - Math.max(rect.left, 0),
+    );
+    const visibleHeight = Math.max(
+      0,
+      Math.min(rect.bottom, innerHeight) - Math.max(rect.top, 0),
+    );
+    const centerDistance = Math.hypot(
+      rect.left + rect.width / 2 - innerWidth / 2,
+      rect.top + rect.height / 2 - innerHeight / 2,
+    );
+    return visibleWidth * visibleHeight - centerDistance;
+  }
+
+  /** @return {Boolean} */
+  function maximumReelSourceMatches(video, url) {
+    if (!url) return false;
+    try {
+      if ("srcObject" in video && video.srcObject != null) return false;
+    } catch (_err) {
+      return false;
+    }
+
+    const declaredSource = video.getAttribute("src");
+    if (declaredSource != null && declaredSource !== url) return false;
+    if (
+      video.currentSrc &&
+      video.currentSrc !== url &&
+      video.readyState > HTMLMediaElement.HAVE_NOTHING
+    ) {
+      return false;
+    }
+    return declaredSource === url || video.currentSrc === url;
+  }
+
+  /** @return {Number} */
+  function maximumReelNumber(value) {
+    const number = Number(value);
+    return Number.isFinite(number) && number > 0 ? number : 0;
+  }
+
+  /** @return {Number} */
+  function maximumReelSeekTime(currentTime, duration) {
+    if (!Number.isFinite(currentTime) || currentTime <= 0) return 0;
+    if (!Number.isFinite(duration) || duration <= 0) return currentTime;
+    return Math.min(currentTime, Math.max(0, duration - 0.05));
+  }
+
+  /** @return {void} */
+  function restoreMaximumReelAttribute(element, name, value) {
+    if (value == null) element.removeAttribute(name);
+    else element.setAttribute(name, value);
+  }
+
+  /** @return {Error} */
+  function createMaximumReelError(code, message, rateLimited = false) {
+    const error = new Error(message);
+    error.code = code;
+    error.rateLimited = rateLimited;
+    return error;
+  }
+
+  /**
+   * registerMaximumReelBinding
+   * @description Cap rapid React/source rebinding so the userscript does not enter
+   * a tug-of-war with Instagram's player.
+   *
+   * @param {String} shortcode
+   * @return {Boolean}
+   */
+  function registerMaximumReelBinding(shortcode) {
+    const now = Date.now();
+    const history = (
+      state.GL_reelQuality.rebindHistory.get(shortcode) || []
+    ).filter((timestamp) => now - timestamp < 15000);
+    if (history.length >= 3) return false;
+
+    history.push(now);
+    state.GL_reelQuality.rebindHistory.set(shortcode, history);
+    return true;
+  }
+
+  /**
+   * onReels
+   * @description Trigger user's reels download event or button display event.
+   *
+   * @param  {Boolean}  isDownload - Check if it is a download operation
+   * @param  {Boolean}  isVideo - Check if reel is a video element
+   * @param  {Boolean}  isPreview - Check if it is need to open new tab
+   * @return {void}
+   */
+  async function onReels(isDownload, isVideo, isPreview) {
+    try {
+      if (isDownload) {
+        updateLoadingBar(true);
+
+        let reelsPath = location.href
+          .split("?")
+          .at(0)
+          .split("instagram.com/reels/")
+          .at(-1)
+          .replaceAll("/", "");
+        let result = await getBlobMedia(reelsPath);
+        let media = filterResourceData(result.data);
+
+        let timestamp = new Date().getTime();
+
+        if (USER_SETTING.RENAME_PUBLISH_DATE) {
+          if (result.type === "query_hash") {
+            timestamp = media.taken_at_timestamp;
+          } else {
+            timestamp = media.taken_at;
+          }
+        }
+
+        if (result.type === "query_hash") {
+          if (isVideo && media.is_video) {
+            if (isPreview) {
+              openNewTab(media.video_url);
+            } else {
+              let type = "mp4";
+              saveFiles(media.video_url, {
+                username: media.owner.username,
+                sourceType: "reels",
+                timestamp,
+                filetype: type,
+                shortcode: reelsPath,
+              });
+            }
+          } else {
+            if (isPreview) {
+              openNewTab(media.display_resources.at(-1).src);
+            } else {
+              let type = "jpg";
+              saveFiles(media.display_resources.at(-1).src, {
+                username: media.owner.username,
+                sourceType: "reels",
+                timestamp,
+                filetype: type,
+                shortcode: reelsPath,
+              });
+            }
+          }
+        } else {
+          if (isVideo && media.video_versions != null) {
+            if (isPreview) {
+              openNewTab(media.video_versions[0].url);
+            } else {
+              let type = "mp4";
+              saveFiles(media.video_versions[0].url, {
+                username: media.owner.username,
+                sourceType: "reels",
+                timestamp,
+                filetype: type,
+                shortcode: reelsPath,
+              });
+            }
+          } else {
+            if (isPreview) {
+              openNewTab(media.image_versions2.candidates[0].url);
+            } else {
+              let type = "jpg";
+              saveFiles(media.image_versions2.candidates[0].url, {
+                username: media.owner.username,
+                sourceType: "reels",
+                timestamp,
+                filetype: type,
+                shortcode: reelsPath,
+              });
+            }
+          }
+        }
+
+        updateLoadingBar(false);
+      } else {
+        //$('.IG_REELS_THUMBNAIL, .IG_REELS').remove();
+        const svgClose =
+          'svg > polyline[points^="20.643 3.357 12 12 3.353 20.647"] ~ line';
+        var timer = setInterval(() => {
+          const hasTiktokStyleLayout = $(svgClose).length > 0;
+          if (
+            hasTiktokStyleLayout ||
+            $('section > main[role="main"] > div div.x1qjc9v5 video').length > 0
+          ) {
+            clearInterval(timer);
+
+            if (USER_SETTING.SCROLL_BUTTON) {
+              const $reelsMain = $('section > main[role="main"]');
+              let $scrollWrapper = $reelsMain.children("#scrollWrapper");
+
+              if (!$scrollWrapper.length) {
+                $scrollWrapper = $(
+                  '<section id="scrollWrapper"><div class="button-up"><div></div></div><div class="button-down"><div></div></div></section>',
+                );
+                $reelsMain.append($scrollWrapper);
+              }
+
+              const scrollReelsBy = function (top) {
+                const scrollContainer = $reelsMain.children("div")[0];
+                scrollContainer?.scrollBy({
+                  top,
+                  behavior: "smooth",
+                });
+              };
+
+              $scrollWrapper
+                .find(".button-up")
+                .off("click.IG_reelsScroll")
+                .on("click.IG_reelsScroll", function () {
+                  scrollReelsBy(-30);
+                });
+              $scrollWrapper
+                .find(".button-down")
+                .off("click.IG_reelsScroll")
+                .on("click.IG_reelsScroll", function () {
+                  scrollReelsBy(30);
+                });
+            } else {
+              $("#scrollWrapper").remove();
+            }
+
+            // Reels playback uses an adaptive MediaSource stream. Let Safari
+            // render its first frame before measuring and modifying the rail.
+            $("div[aria-busy][tabindex]")
+              .children("div")
+              .each(function () {
+                if (
+                  $(this).children().length > 0 &&
+                  $(this).width() > window.innerWidth * 0.8 &&
+                  $(this).height() > window.innerHeight * 0.8 &&
+                  $(this).find("video").length > 0
+                ) {
+                  scheduleReelsButton($(this));
+                }
+              });
+          }
+        }, checkInterval);
+      }
+    } catch (err) {
+      console.error("[reels]", err);
+    }
+  }
+
+  function scheduleReelsButton($main) {
+    if (
+      $main.find(".IG_REELS_CONTROLS").length ||
+      $main.data("insta-controls-reels-controls-pending")
+    ) {
+      return;
+    }
+
+    $main.data("insta-controls-reels-controls-pending", true);
+
+    let installQueued = false;
+    const queueInstall = function () {
+      if (installQueued) return;
+      installQueued = true;
+
+      const install = function () {
+        $main.removeData("insta-controls-reels-controls-pending");
+        if ($main[0]?.isConnected) appendReelsButton($main);
+      };
+
+      if (typeof window.requestIdleCallback === "function") {
+        window.requestIdleCallback(install, { timeout: 1000 });
+      } else {
+        setTimeout(install, IS_SAFARI ? 250 : 0);
+      }
+    };
+
+    const video = $main.find("video").first()[0];
+    const queueAfterPlaybackStart = function () {
+      setTimeout(queueInstall, IS_SAFARI ? 1000 : 0);
+    };
+
+    if (typeof video?.requestVideoFrameCallback === "function") {
+      video.requestVideoFrameCallback(queueAfterPlaybackStart);
+      setTimeout(queueInstall, IS_SAFARI ? 2000 : 1200);
+    } else if (video && video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+      video.addEventListener("loadeddata", queueAfterPlaybackStart, {
+        once: true,
+      });
+      setTimeout(queueInstall, IS_SAFARI ? 2000 : 1200);
+    } else {
+      queueAfterPlaybackStart();
+    }
+  }
+
+  function appendReelsButton($main) {
+    if (!$main.find(".IG_REELS_CONTROLS").length) {
+      const $actionRail = $main
+        .find("div")
+        .filter(function () {
+          const $children = $(this).children();
+          const directActionGroups = $children.filter(function () {
+            return $(this).find('[role="button"] svg[aria-label]').length > 0;
+          }).length;
+
+          // Avoid forcing layout for every descendant in a Reel. Only the
+          // small set of action-group candidates needs geometry inspection.
+          if (directActionGroups < 3) return false;
+
+          const rect = this.getBoundingClientRect();
+          const computedStyle = window.getComputedStyle(this);
+
+          return (
+            computedStyle.display === "flex" &&
+            computedStyle.flexDirection === "column" &&
+            rect.width > 0 &&
+            rect.width <= 120 &&
+            rect.height >= 180
+          );
+        })
+        .first();
+
+      if (!$actionRail.length) {
+        logger("Unable to locate the Reels action rail");
+        return;
+      }
+
+      $actionRail.prepend(
+        `<div class="IG_REELS_CONTROLS" data-insta-controls-surface="reels">
+          <div data-ih-locale-title="DW" title="${_i18n("DW")}" class="IG_REELS">${SVG.DOWNLOAD}</div>
+          <div data-ih-locale-title="NEW_TAB" title="${_i18n("NEW_TAB")}" class="IG_REELS_NEWTAB">${SVG.NEW_TAB}</div>
+          <div data-ih-locale-title="VIDEO_THUMBNAIL" title="${_i18n("VIDEO_THUMBNAIL")}" class="IG_REELS_THUMBNAIL">${SVG.THUMBNAIL}</div>
+        </div>`,
+      );
+
+      $main.find("video").each(function () {
+        $(this)
+          .off("fullscreenchange.IG_videoControl")
+          .on("fullscreenchange.IG_videoControl", function () {
+            if (($(this).attr("style") || "").includes("object-fit")) {
+              if (document.fullscreenElement == this) {
+                $(this).css("object-fit", "contain");
+              } else {
+                $(this).css("object-fit", "cover");
+              }
+            }
+          });
+      });
+
+      // Disable video autoplay
+      if (USER_SETTING.DISABLE_VIDEO_LOOPING) {
+        $main.find("video").each(function () {
+          $(this).on("ended", function () {
+            if (!$(this).data("loop")) {
+              let $element_play_button = $(this)
+                .next()
+                .find('div[role="presentation"] > div svg > path[d^="M5.888"]')
+                .parents('button[role="button"], div[role="button"]');
+              if ($element_play_button.length > 0) {
+                $(this).attr("data-loop", true);
+                $element_play_button.trigger("click");
+                logger(
+                  "Adding video event listener #loop, then paused click()",
+                );
+              } else {
+                $(this).attr("data-loop", true);
+                $(this).parent().find(".xpgaw4o").removeAttr("style");
+                this.pause();
+                logger(
+                  "Adding video event listener #loop, then paused pause()",
+                );
+              }
+            }
+          });
+        });
+      }
+
+      if (USER_SETTING.HTML5_VIDEO_CONTROL) {
+        registerHTML5VideoControls($main.find("video"));
+      }
+
+      var $videos = $main.find("video");
+      var $buttonParent = $main
+        .find('div[role="presentation"] > div[role="button"] > div')
+        .first();
+      if (USER_SETTING.HTML5_VIDEO_CONTROL) {
+        $buttonParent.find("div.volume_slider").remove();
+      } else {
+        toggleVolumeSilder($videos, $buttonParent, "reel");
+      }
+    }
+  }
+
+  /**
+   * createStoryListDOM
+   * @description Create a list of story items in the popup dialog.
+   *
+   * @return {void}
+   */
+  async function createStoryListDOM(obj, type) {
+    try {
+      $(".IG_POPUP_DIG #post_info").text(
+        `${type} ID: ${obj.data.reels_media[0].id}`,
+      );
+      const selector = ".IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_BODY";
+
+      obj.data.reels_media[0].items.forEach((item, idx) => {
+        let date = new Date().getTime();
+        let timestamp = Math.floor(date / 1000);
+        let username =
+          obj.data.reels_media[0]?.user?.username ||
+          obj.data.reels_media[0]?.owner?.username;
+
+        if (USER_SETTING.RENAME_PUBLISH_DATE) {
+          timestamp = item.taken_at_timestamp;
+        }
+
+        item.display_resources.sort(function (a, b) {
+          if (a.config_width < b.config_width) return 1;
+          if (a.config_width > b.config_width) return -1;
+          return 0;
+        });
+
+        if (item.is_video) {
+          $(selector).append(
+            `<a media-id="${item.id}" datetime="${timestamp}" data-blob="true" data-needed="direct" data-name="${type}" data-type="mp4" data-username="${username}" data-path="${item.id}" data-globalIndex="${idx + 1}" href="javascript:;" data-href="${item.video_resources[0].src}"><img width="100" src="${item.display_resources[0].src}" /><br/>- <span data-ih-locale-title="VID">${_i18n("VID")}</span> ${idx} -</a>`,
+          );
+        } else {
+          $(selector).append(
+            `<a media-id="${item.id}" datetime="${timestamp}" data-blob="true" data-needed="direct" data-name="${type}" data-type="jpg" data-username="${username}" data-path="${item.id}" data-globalIndex="${idx + 1}" href="javascript:;" data-href="${item.display_resources[0].src}"><img width="100" src="${item.display_resources[0].src}" /><br/>- <span data-ih-locale-title="IMG">${_i18n("IMG")}</span> ${idx} -</a>`,
+          );
+        }
+      });
+
+      $(".IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_BODY a").each(
+        function () {
+          $(this).wrap("<div></div>");
+          $(this).before(
+            '<label class="inner_box_wrapper"><input class="inner_box" type="checkbox"><span></span></label>',
+          );
+          $(this).after(
+            `<div data-ih-locale-title="NEW_TAB" title="${_i18n("NEW_TAB")}" class="newTab">${SVG.NEW_TAB}</div>`,
+          );
+
+          if ($(this).attr("data-type") == "mp4") {
+            $(this).after(
+              `<div data-ih-locale-title="VIDEO_THUMBNAIL" title="${_i18n("VIDEO_THUMBNAIL")}" class="videoThumbnail">${SVG.THUMBNAIL}</div>`,
+            );
+          }
+        },
+      );
+
+      updatePopupSelectionSummary();
+      updateLoadingBar(false);
+    } catch (err) {
+      console.error("createStoryListDOM()", err);
+    }
+  }
+
+  /**
+   * onStoryAll
+   * @description Trigger user's story all download event.
+   *
+   * @return {void}
+   */
+  async function onStoryAll() {
+    updateLoadingBar(true);
+
+    let date = new Date().getTime();
+    let timestamp = Math.floor(date / 1000);
+    let username =
+      $("body > div section._ac0a header._ac0k ._ac0l a + div a")
+        .first()
+        .text() ||
+      location.pathname
+        .split("/")
+        .filter((s) => s.length > 0)
+        .at(1);
+
+    let userInfo = await getUserId(username);
+    let userId = userInfo.user.pk;
+    let stories = await getStories(userId);
+
+    if (USER_SETTING.DIRECT_DOWNLOAD_STORY) {
+      let complete = 0;
+      setDownloadProgress(complete, stories.data.reels_media[0].items.length);
+
+      stories.data.reels_media[0].items.forEach((item, idx) => {
+        setTimeout(() => {
+          if (USER_SETTING.RENAME_PUBLISH_DATE) {
+            timestamp = item.taken_at_timestamp;
+          }
+
+          item.display_resources.sort(function (a, b) {
+            if (a.config_width < b.config_width) return 1;
+            if (a.config_width > b.config_width) return -1;
+            return 0;
+          });
+
+          if (item.is_video) {
+            saveFiles(item.video_resources[0].src, {
+              username,
+              sourceType: "stories",
+              timestamp,
+              filetype: "mp4",
+              shortcode: item.id,
+            }).then(() => {
+              setDownloadProgress(
+                ++complete,
+                stories.data.reels_media[0].items.length,
+              );
+            });
+          } else {
+            saveFiles(item.display_resources[0].src, {
+              username,
+              sourceType: "stories",
+              timestamp,
+              filetype: "jpg",
+              shortcode: item.id,
+            }).then(() => {
+              setDownloadProgress(
+                ++complete,
+                stories.data.reels_media[0].items.length,
+              );
+            });
+          }
+        }, 100 * idx);
+      });
+    } else {
+      IG_createDM(false, true);
+      createStoryListDOM(stories, "stories");
+    }
+  }
+
+  /**
+   * resolveStoryMediaIdByTimestamp
+   * @description Identifies the currently visible story by comparing the
+   *              <time datetime> element in the viewer with taken_at_timestamp
+   *              from the API items array. More reliable than index-based DOM
+   *              mapping because it does not depend on CSS class names or
+   *              progress-bar structure.
+   *
+   * @param  {Object}  stories  - Full getStories() / getHighlightStories() response
+   * @return {?String}          - Best-matching item id, or null if undetermined
+   */
+  function resolveStoryMediaIdByTimestamp(stories) {
+    const items = stories?.data?.reels_media?.[0]?.items;
+    if (!items || items.length === 0) return null;
+
+    // Reuse the same multi-layout time-element selection that the rest of the
+    // script already relies on; exclude highlight-nav links and role="button"
+    // to avoid picking up unrelated timestamps.
+    const $time = $("body > div section:visible time[datetime]")
+      .filter(function () {
+        return (
+          $(this).is(":visible") &&
+          $(this).closest('a[href^="/stories/highlights/"]').length === 0 &&
+          $(this).closest('[role="button"]').length === 0
+        );
+      })
+      .first();
+
+    if ($time.length === 0) return null;
+
+    const visibleTs = Math.floor(
+      new Date($time.attr("datetime")).getTime() / 1000,
+    );
+    if (!Number.isFinite(visibleTs) || visibleTs === 0) return null;
+
+    let bestId = null;
+    let minDiff = Infinity;
+
+    items.forEach((item) => {
+      const diff = Math.abs((item.taken_at_timestamp || 0) - visibleTs);
+      if (diff < minDiff) {
+        minDiff = diff;
+        bestId = item.id;
+      }
+    });
+
+    logger(
+      "[resolveStoryMediaIdByTimestamp]",
+      "best match:",
+      bestId,
+      "diff(s):",
+      minDiff,
+    );
+    return bestId; // always return best match — better than any index heuristic
+  }
+
+  /**
+   * onStory
+   * @description Trigger user's story download event or button display event.
+   *
+   * @param  {Boolean}  isDownload - Check if it is a download operation
+   * @param  {Boolean}  isForce - Check if downloading directly from API instead of cache
+   * @param  {Boolean}  isPreview - Check if it is need to open new tab
+   * @return {void}
+   */
+  async function onStory(isDownload, isForce, isPreview) {
+    var username =
+      $("body > div section._ac0a header._ac0k ._ac0l a + div a")
+        .first()
+        .text() ||
+      location.pathname
+        .split("/")
+        .filter((s) => s.length > 0)
+        .at(1);
+    if (isDownload) {
+      let date = new Date().getTime();
+      let timestamp = Math.floor(date / 1000);
+
+      updateLoadingBar(true);
+      if (USER_SETTING.FORCE_RESOURCE_VIA_MEDIA && !state.tempFetchRateLimit) {
+        let mediaId = null;
+
+        let userInfo = await getUserId(username);
+        let userId = userInfo.user.pk;
+        let stories = await getStories(userId);
+        let urlID = location.pathname
+          .split("/")
+          .filter((s) => s.length > 0 && s.match(/^([0-9]{10,})$/))
+          .at(-1);
+
+        /*
+                let latest_reel_media = stories.data.reels_media[0].latest_reel_media;
+                let last_seen = stories.data.reels_media[0].seen;
+                logger(stories);
+
+                if(urlID == null){
+                    mediaId = stories.data.reels_media[0].items.filter(function(item, index){
+                        return item.taken_at_timestamp === last_seen && item.taken_at_timestamp !== latest_reel_media || last_seen === latest_reel_media && index === 0;
+                    })?.at(0)?.id;
+                    logger('nula', mediaId);
+                }
+                else{
+                    stories.data.reels_media[0].items.forEach(item => {
+                        if(item.id == urlID){
+                            mediaId = item.id;
+                        }
+                    });
+                }
+                */
+
+        stories.data.reels_media[0].items.forEach((item) => {
+          if (item.id == urlID) {
+            mediaId = item.id;
+          }
+        });
+
+        // FIX: timestamp-based match before fragile index/CSS fallbacks
+        if (mediaId == null) {
+          mediaId = resolveStoryMediaIdByTimestamp(stories);
+        }
+
+        if (mediaId == null) {
+          let $header = getStoryProgress(username);
+
+          $header.each(function (index) {
+            if ($(this).children().length > 0) {
+              mediaId = stories.data.reels_media[0].items[index].id;
+            }
+          });
+        }
+
+        if (mediaId == null) {
+          // appear in from profile page to story page
+          $("body > div section:visible div.x1ned7t2.x78zum5 > div").each(
+            function (index) {
+              if ($(this).hasClass("x1lix1fw")) {
+                if ($(this).children().length > 0) {
+                  mediaId = stories.data.reels_media[0].items[index].id;
+                }
+              }
+            },
+          );
+
+          // appear in from home page to story page
+          $("body > div section:visible ._ac0k > ._ac3r > div").each(
+            function (index) {
+              if ($(this).children().hasClass("_ac3q")) {
+                mediaId = stories.data.reels_media[0].items[index].id;
+              }
+            },
+          );
+        }
+
+        if (mediaId == null) {
+          mediaId = location.pathname
+            .split("/")
+            .filter((s) => s.length > 0 && s.match(/^([0-9]{10,})$/))
+            .at(-1);
+        }
+
+        if (USER_SETTING.CAPTURE_IMAGE_VIA_MEDIA_CACHE) {
+          const cached = getImageFromCache(mediaId);
+          if (
+            cached &&
+            !stories.data.reels_media[0].items
+              .filter((item) => item.id === mediaId)
+              .at(0).is_video
+          ) {
+            logger("[Restore Cached onStory]", mediaId);
+            if (isPreview) {
+              openNewTab(cached);
+            } else {
+              saveFiles(cached, {
+                username,
+                sourceType: "stories",
+                timestamp,
+                filetype: "jpg",
+                shortcode: mediaId,
+              });
+            }
+            return;
+          }
+        }
+
+        let result = await getMediaInfo(mediaId);
+
+        if (USER_SETTING.RENAME_PUBLISH_DATE) {
+          timestamp = result.items[0].taken_at;
+        }
+
+        if (result.status === "ok") {
+          if (result.items[0].video_versions) {
+            const handled = await tryHandleDashFromMediaItem({
+              mediaItem: result.items[0],
+              username,
+              sourceType: "stories",
+              timestamp,
+              shortcode: mediaId,
+              isPreview,
+            });
+            if (handled) {
+              updateLoadingBar(false);
+              return;
+            }
+
+            if (isPreview) {
+              openNewTab(result.items[0].video_versions[0].url);
+            } else {
+              saveFiles(result.items[0].video_versions[0].url, {
+                username,
+                sourceType: "stories",
+                timestamp,
+                filetype: "mp4",
+                shortcode: mediaId,
+              });
+            }
+          } else {
+            if (isPreview) {
+              openNewTab(result.items[0].image_versions2.candidates[0].url);
+            } else {
+              saveFiles(result.items[0].image_versions2.candidates[0].url, {
+                username,
+                sourceType: "stories",
+                timestamp,
+                filetype: "jpg",
+                shortcode: mediaId,
+              });
+            }
+          }
+        } else {
+          if (USER_SETTING.FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED) {
+            state.tempFetchRateLimit = true;
+            onStory(isDownload, isForce, isPreview);
+          } else {
+            alert(
+              "Fetch failed from Media API. API response message: " +
+                result.message,
+            );
+          }
+          logger(result);
+        }
+
+        updateLoadingBar(false);
+        return;
+      }
+
+      if ($("body > div section:visible video[playsinline]").length > 0) {
+        // Download stories if it is video
+        let type = "mp4";
+        let videoURL = "";
+        let targetURL = location.pathname
+          .replace(/\/$/gi, "")
+          .split("/")
+          .at(-1);
+        let mediaId = null;
+
+        if (state.GL_dataCache.stories[username] && !isForce) {
+          logger("Fetch from memory cache:", username);
+          state.GL_dataCache.stories[
+            username
+          ].data.reels_media[0].items.forEach((item) => {
+            if (item.id == targetURL) {
+              videoURL = item.video_resources[0].src;
+              if (USER_SETTING.RENAME_PUBLISH_DATE) {
+                timestamp = item.taken_at_timestamp;
+                mediaId = item.id;
+              }
+            }
+          });
+
+          if (videoURL.length == 0) {
+            logger("Memory cache not found, try fetch from API:", username);
+            onStory(true, true);
+            return;
+          }
+        } else {
+          let userInfo = await getUserId(username);
+          let userId = userInfo.user.pk;
+          let stories = await getStories(userId);
+
+          stories.data.reels_media[0].items.forEach((item) => {
+            if (item.id == targetURL) {
+              videoURL = item.video_resources[0].src;
+              if (USER_SETTING.RENAME_PUBLISH_DATE) {
+                timestamp = item.taken_at_timestamp;
+                mediaId = item.id;
+              }
+            }
+          });
+
+          // GitHub issue #4: thinkpad4
+          if (videoURL.length == 0) {
+            let $header = getStoryProgress(username);
+
+            $header.each(function (index) {
+              if ($(this).children().length > 0) {
+                videoURL =
+                  stories.data.reels_media[0].items[index].video_resources[0]
+                    .src;
+                if (USER_SETTING.RENAME_PUBLISH_DATE) {
+                  timestamp =
+                    stories.data.reels_media[0].items[index].taken_at_timestamp;
+                  mediaId = stories.data.reels_media[0].items[index].id;
+                }
+              }
+            });
+
+            if (videoURL.length == 0) {
+              // appear in from profile page to story page
+              $("body > div section:visible div.x1ned7t2.x78zum5 > div").each(
+                function (index) {
+                  if ($(this).hasClass("x1lix1fw")) {
+                    if ($(this).children().length > 0) {
+                      videoURL =
+                        stories.data.reels_media[0].items[index]
+                          .video_resources[0].src;
+                      if (USER_SETTING.RENAME_PUBLISH_DATE) {
+                        timestamp =
+                          stories.data.reels_media[0].items[index]
+                            .taken_at_timestamp;
+                        mediaId = stories.data.reels_media[0].items[index].id;
+                      }
+                    }
+                  }
+                },
+              );
+
+              // appear in from home page to story page
+              $("body > div section:visible ._ac0k > ._ac3r > div").each(
+                function (index) {
+                  if ($(this).children().hasClass("_ac3q")) {
+                    videoURL =
+                      stories.data.reels_media[0].items[index]
+                        .video_resources[0].src;
+                    if (USER_SETTING.RENAME_PUBLISH_DATE) {
+                      timestamp =
+                        stories.data.reels_media[0].items[index]
+                          .taken_at_timestamp;
+                      mediaId = stories.data.reels_media[0].items[index].id;
+                    }
+                  }
+                },
+              );
+            }
+          }
+
+          state.GL_dataCache.stories[username] = stories;
+        }
+
+        if (videoURL.length == 0) {
+          alert(_i18n("NO_VID_URL"));
+        } else {
+          if (isPreview) {
+            openNewTab(videoURL);
+          } else {
+            saveFiles(videoURL, {
+              username,
+              sourceType: "stories",
+              timestamp,
+              filetype: type,
+              shortcode: mediaId,
+            });
+          }
+        }
+      } else {
+        // Download stories if it is image
+        let srcset = $(
+          "body > div section:visible img[referrerpolicy][class], body > div section:visible img[crossorigin][class]:not([alt])",
+        )
+          .attr("srcset")
+          ?.split(",")[0]
+          ?.split(" ")[0];
+        let link = srcset
+          ? srcset
+          : $(
+              "body > div section:visible img[referrerpolicy][class], body > div section:visible img[crossorigin][class]:not([alt])",
+            )
+              .filter(function () {
+                return (
+                  $(this).parents("a").length === 0 &&
+                  $(this).width() === $(this).parent().width()
+                );
+              })
+              .attr("src");
+
+        if (!link) {
+          // _aa63 mean stories picture in stories page (not avatar)
+          let $element = $("body > div section:visible img._aa63");
+          link = $element.attr("srcset")
+            ? $element.attr("srcset")?.split(",")[0]?.split(" ")[0]
+            : $element.attr("src");
+        }
+
+        if (USER_SETTING.RENAME_PUBLISH_DATE) {
+          timestamp = new Date(
+            $("body > div section:visible time[datetime][class]")
+              .first()
+              .attr("datetime"),
+          ).getTime();
+        }
+
+        let downloadLink = link;
+        let type = "jpg";
+
+        const mediaId = getImageFromCache(getStoryId(downloadLink) ?? "-");
+
+        if (USER_SETTING.CAPTURE_IMAGE_VIA_MEDIA_CACHE) {
+          const cached = getImageFromCache(mediaId);
+          if (cached) {
+            if (isPreview) {
+              openNewTab(cached);
+            } else {
+              saveFiles(cached, {
+                username,
+                sourceType: "stories",
+                timestamp,
+                filetype: "jpg",
+                shortcode: mediaId,
+              });
+            }
+            return;
+          }
+        }
+
+        if (isPreview) {
+          openNewTab(downloadLink);
+        } else {
+          saveFiles(downloadLink, {
+            username,
+            sourceType: "stories",
+            timestamp,
+            filetype: type,
+            shortcode: mediaId,
+          });
+        }
+      }
+
+      state.tempFetchRateLimit = false;
+      updateLoadingBar(false);
+    } else {
+      // Add the stories download button
+      if (!$(".IG_DWSTORY").length) {
+        state.GL_dataCache.stories = {};
+        let $element = null;
+        // Default detecter (section layout mode)
+        if ($("body > div section._ac0a").length > 0) {
+          $element = $("body > div section:visible._ac0a");
+        }
+        // detecter (single story layout mode)
+        else {
+          $element = $(
+            "body > div section:visible > div > div[style]:not([class])",
+          );
+          $element.css("position", "relative");
+        }
+
+        if ($element.length === 0) {
+          $element = $('div[id^="mount"] section > div > a[href="/"]')
+            .parent()
+            .parent()
+            .parent()
+            .find("section:visible > div > div[style]:not([class])");
+          $element.css("position", "relative");
+        }
+
+        if ($element.length === 0) {
+          $element = $('div[id^="mount"] section > div > a[href="/"]')
+            .parent()
+            .parent()
+            .parent()
+            .find(
+              'section:visible > div div[style]:not([class]) > div:not([data-visualcompletion="loading-state"])',
+            );
+          $element.css("position", "relative");
+        }
+
+        if ($element.length === 0) {
+          $element = $('div[id^="mount"] section > div a[href="/"]')
+            .parents("section:visible")
+            .find("div[style]:not([class])");
+          $element.css("position", "relative");
+        }
+
+        // Detecter for div layout mode
+        if ($element.length === 0) {
+          let $$element = $(
+            "body > div div:not([hidden]) section:visible > div div[class][style] > div[style]:not([class])",
+          );
+          let nowSize = 0;
+
+          $$element.each(function () {
+            if ($(this).width() > nowSize) {
+              nowSize = $(this).width();
+              $element = $(this).children("div").first();
+            }
+          });
+        }
+
+        if ($element != null) {
+          $element.first().css("position", "relative");
+          $element
+            .first()
+            .append(
+              `<div data-ih-locale-title="DW" title="${_i18n("DW")}" class="IG_DWSTORY">${SVG.DOWNLOAD}</div>`,
+            );
+          $element
+            .first()
+            .append(
+              `<div data-ih-locale-title="NEW_TAB" title="${_i18n("NEW_TAB")}" class="IG_DWNEWTAB">${SVG.NEW_TAB}</div>`,
+            );
+
+          let $header = getStoryProgress(username);
+          if ($header.length > 1) {
+            $element
+              .first()
+              .append(
+                `<div data-ih-locale-title="DW_ALL" title="${_i18n("DW_ALL")}" class="IG_DWSTORY_ALL">${SVG.DOWNLOAD_ALL}</div>`,
+              );
+          }
+
+          setStoryProgressIndexText(
+            $element.first(),
+            $header,
+            "IG_DWSTORY_POSITION",
+          );
+
+          // Modify video volume
+          //if(USER_SETTING.MODIFY_VIDEO_VOLUME){
+          //    $element.find('video').each(function(){
+          //        $(this).on('play playing', function(){
+          //            if(!$(this).data('modify')){
+          //                $(this).attr('data-modify', true);
+          //                this.volume = VIDEO_VOLUME;
+          //                logger('(story) Added video event listener #modify');
+          //            }
+          //        });
+          //    });
+          //}
+
+          // Make sure to first remove thumbnail button if still exists and story is a picture
+          $element.find("img[referrerpolicy]").each(function () {
+            $(this).on("load", function () {
+              if (!$(this).data("remove-thumbnail")) {
+                if ($element.find(".IG_DWSTORY_THUMBNAIL").length === 0) {
+                  $(this).attr("data-remove-thumbnail", true);
+                  $(".IG_DWSTORY_THUMBNAIL").remove();
+                  logger("(story) Manually removing thumbnail button");
+                } else {
+                  $(this).attr("data-remove-thumbnail", true);
+                  logger(
+                    "(story) Thumbnail button is not present for this picture",
+                  );
+                }
+              }
+            });
+          });
+
+          // Try to use event listener 'timeupdate' in order to detect if story is a video
+          //$element.find('video').each(function(){
+          //    $(this).on('timeupdate',function(){
+          //        if(!$(this).data('modify-thumbnail')){
+          //            if($element.find('.IG_DWSTORY_THUMBNAIL').length === 0){
+          //                $(this).attr('data-modify-thumbnail', true);
+          //                onStoryThumbnail(false);
+          //                logger('(story) Manually inserting thumbnail button');
+          //            }
+          //            else{
+          //                $(this).attr('data-modify-thumbnail', true);
+          //                logger('(story) Thumbnail button already inserted');
+          //            }
+          //        }
+          //    });
+          //});
+        }
+      } else {
+        setStoryProgressIndexByUsername(
+          $(".IG_DWSTORY").parent(),
+          username,
+          "IG_DWSTORY_POSITION",
+        );
+      }
+    }
+  }
+
+  /**
+   * onStoryThumbnail
+   * @description Trigger user's story video thumbnail download event or button display event.
+   *
+   * @param  {Boolean}  isDownload - Check if it is a download operation
+   * @param  {Boolean}  isForce - Check if downloading directly from API instead of cache
+   * @return {void}
+   */
+  async function onStoryThumbnail(isDownload, isForce) {
+    if (isDownload) {
+      // Download stories if it is video
+      let date = new Date().getTime();
+      let timestamp = Math.floor(date / 1000);
+      let type = "jpg";
+      let username =
+        $("body > div section._ac0a header._ac0k ._ac0l a + div a")
+          .first()
+          .text() || location.pathname.split("/").at(2);
+      // Download thumbnail
+      let targetURL = location.pathname.replace(/\/$/gi, "").split("/").at(-1);
+      let videoThumbnailURL = "";
+      let mediaId = null;
+
+      updateLoadingBar(true);
+
+      if (USER_SETTING.FORCE_RESOURCE_VIA_MEDIA && !state.tempFetchRateLimit) {
+        let userInfo = await getUserId(username);
+        let userId = userInfo.user.pk;
+        let stories = await getStories(userId);
+        let urlID = location.pathname
+          .split("/")
+          .filter((s) => s.length > 0 && s.match(/^([0-9]{10,})$/))
+          .at(-1);
+
+        stories.data.reels_media[0].items.forEach((item) => {
+          if (item.id == urlID) {
+            mediaId = item.id;
+          }
+        });
+
+        // FIX: timestamp-based match before fragile index/CSS fallbacks
+        if (mediaId == null) {
+          mediaId = resolveStoryMediaIdByTimestamp(stories);
+        }
+
+        if (mediaId == null) {
+          let $header = getStoryProgress(username);
+
+          $header.each(function (index) {
+            if ($(this).children().length > 0) {
+              mediaId = stories.data.reels_media[0].items[index].id;
+            }
+          });
+        }
+
+        if (mediaId == null) {
+          // appear in from profile page to story page
+          $("body > div section:visible div.x1ned7t2.x78zum5 > div").each(
+            function (index) {
+              if ($(this).hasClass("x1lix1fw")) {
+                if ($(this).children().length > 0) {
+                  mediaId = stories.data.reels_media[0].items[index].id;
+                }
+              }
+            },
+          );
+
+          // appear in from home page to story page
+          $("body > div section:visible ._ac0k > ._ac3r > div").each(
+            function (index) {
+              if ($(this).children().hasClass("_ac3q")) {
+                mediaId = stories.data.reels_media[0].items[index].id;
+              }
+            },
+          );
+        }
+
+        if (mediaId == null) {
+          mediaId = location.pathname
+            .split("/")
+            .filter((s) => s.length > 0 && s.match(/^([0-9]{10,})$/))
+            .at(-1);
+        }
+
+        if (USER_SETTING.CAPTURE_IMAGE_VIA_MEDIA_CACHE) {
+          const cached = getImageFromCache(mediaId);
+          if (cached) {
+            logger("[Restore Cached onStoryThumbnail]", mediaId);
+            saveFiles(cached, {
+              username,
+              sourceType: "stories",
+              timestamp,
+              filetype: "jpg",
+              shortcode: mediaId,
+            });
+            return;
+          }
+        }
+
+        let result = await getMediaInfo(mediaId);
+
+        if (USER_SETTING.RENAME_PUBLISH_DATE) {
+          timestamp = result.items[0].taken_at;
+        }
+
+        if (result.status === "ok") {
+          saveFiles(result.items[0].image_versions2.candidates[0].url, {
+            username,
+            sourceType: "stories",
+            timestamp,
+            filetype: "jpg",
+            shortcode: mediaId,
+          });
+        } else {
+          if (USER_SETTING.FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED) {
+            state.tempFetchRateLimit = true;
+            onStoryThumbnail(true, isForce);
+          } else {
+            alert(
+              "Fetch failed from Media API. API response message: " +
+                result.message,
+            );
+          }
+
+          logger(result);
+        }
+
+        updateLoadingBar(false);
+        return;
+      }
+
+      if (state.GL_dataCache.stories[username] && !isForce) {
+        logger("Fetch from memory cache:", username);
+        state.GL_dataCache.stories[username].data.reels_media[0].items.forEach(
+          (item) => {
+            if (item.id == targetURL) {
+              videoThumbnailURL = item.display_url;
+              if (USER_SETTING.RENAME_PUBLISH_DATE) {
+                timestamp = item.taken_at_timestamp;
+                mediaId = item.id;
+              }
+            }
+          },
+        );
+
+        if (videoThumbnailURL.length == 0) {
+          logger("Memory cache not found, try fetch from API:", username);
+          onStoryThumbnail(true, true);
+          return;
+        }
+      } else {
+        let userInfo = await getUserId(username);
+        let userId = userInfo.user.pk;
+        let stories = await getStories(userId);
+
+        stories.data.reels_media[0].items.forEach((item) => {
+          if (item.id == targetURL) {
+            videoThumbnailURL = item.display_url;
+            if (USER_SETTING.RENAME_PUBLISH_DATE) {
+              timestamp = item.taken_at_timestamp;
+              mediaId = item.id;
+            }
+          }
+        });
+
+        // GitHub issue #4: thinkpad4
+        if (videoThumbnailURL.length == 0) {
+          let $header = getStoryProgress(username);
+
+          $header.each(function (index) {
+            if ($(this).children().length > 0) {
+              videoThumbnailURL =
+                stories.data.reels_media[0].items[index].display_url;
+              if (USER_SETTING.RENAME_PUBLISH_DATE) {
+                timestamp =
+                  stories.data.reels_media[0].items[index].taken_at_timestamp;
+                mediaId = stories.data.reels_media[0].items[index].id;
+              }
+            }
+          });
+
+          if (videoThumbnailURL.length == 0) {
+            // appear in from profile page to story page
+            $("body > div section:visible div.x1ned7t2.x78zum5 > div").each(
+              function (index) {
+                if ($(this).hasClass("x1lix1fw")) {
+                  if ($(this).children().length > 0) {
+                    videoThumbnailURL =
+                      stories.data.reels_media[0].items[index].display_url;
+                    if (USER_SETTING.RENAME_PUBLISH_DATE) {
+                      timestamp =
+                        stories.data.reels_media[0].items[index]
+                          .taken_at_timestamp;
+                      mediaId = stories.data.reels_media[0].items[index].id;
+                    }
+                  }
+                }
+              },
+            );
+
+            // appear in from home page to story page
+            $("body > div section:visible ._ac0k > ._ac3r > div").each(
+              function (index) {
+                if ($(this).children().hasClass("_ac3q")) {
+                  videoThumbnailURL =
+                    stories.data.reels_media[0].items[index].display_url;
+                  if (USER_SETTING.RENAME_PUBLISH_DATE) {
+                    timestamp =
+                      stories.data.reels_media[0].items[index]
+                        .taken_at_timestamp;
+                    mediaId = stories.data.reels_media[0].items[index].id;
+                  }
+                }
+              },
+            );
+          }
+        }
+      }
+
+      saveFiles(videoThumbnailURL, {
+        username,
+        sourceType: "thumbnail",
+        timestamp,
+        filetype: type,
+        shortcode: mediaId,
+      });
+      state.tempFetchRateLimit = false;
+      updateLoadingBar(false);
+    } else {
+      if ($("body > div div.IG_DWSTORY").parent().find("video[class]").length) {
+        // Add the stories download button
+        let $element = null;
+        // Default detecter (section layout mode)
+        if ($("body > div section._ac0a").length > 0) {
+          $element = $("body > div section:visible._ac0a");
+        }
+        // detecter (single story layout mode)
+        else {
+          $element = $(
+            "body > div section:visible > div > div[style]:not([class])",
+          );
+          $element.css("position", "relative");
+        }
+
+        if ($element.length === 0) {
+          $element = $('div[id^="mount"] section > div > a[href="/"]')
+            .parent()
+            .parent()
+            .parent()
+            .find("section:visible > div > div[style]:not([class])");
+          $element.css("position", "relative");
+        }
+
+        if ($element.length === 0) {
+          $element = $('div[id^="mount"] section > div > a[href="/"]')
+            .parent()
+            .parent()
+            .parent()
+            .find(
+              'section:visible > div div[style]:not([class]) > div:not([data-visualcompletion="loading-state"])',
+            );
+          $element.css("position", "relative");
+        }
+
+        // Detecter for div layout mode
+        if ($element.length === 0) {
+          let $$element = $(
+            "body > div div:not([hidden]) section:visible > div div[class][style] > div[style]:not([class])",
+          );
+          let nowSize = 0;
+
+          $$element.each(function () {
+            if ($(this).width() > nowSize) {
+              nowSize = $(this).width();
+              $element = $(this).children("div").first();
+            }
+          });
+        }
+
+        if ($element != null) {
+          $element.first().css("position", "relative");
+          $element
+            .first()
+            .append(
+              `<div data-ih-locale-title="VIDEO_THUMBNAIL" title="${_i18n("VIDEO_THUMBNAIL")}" class="IG_DWSTORY_THUMBNAIL">${SVG.THUMBNAIL}</div>`,
+            );
+        }
+      }
+    }
+  }
+
+  /* utils */
+
+  /**
+   * getHighlightStories
+   * @description Get a list of all stories in highlight Id.
+   *
+   * @param  {Integer}  highlightId
+   * @return {Object}
+   */
+  function getHighlightStories(highlightId) {
+    return new Promise((resolve, reject) => {
+      let getURL = `https://www.instagram.com/graphql/query/?query_hash=45246d3fe16ccc6577e0bd297a5db1ab&variables=%7B%22highlight_reel_ids%22:%5B%22${highlightId}%22%5D,%22precomposed_overlay%22:false%7D`;
+
+      GM_xmlhttpRequest({
+        method: "GET",
+        url: getURL,
+        onload: function (response) {
+          try {
+            let obj = JSON.parse(response.response);
+            resolve(obj);
+          } catch (err) {
+            logger("getHighlightStories()", "reject", err.message);
+            reject(err);
+          }
+        },
+        onerror: function (err) {
+          logger("getHighlightStories()", "reject", err);
+          reject(err);
+        },
+      });
+    });
+  }
+
+  /**
+   * getStories
+   * @description Get a list of all stories in user Id.
+   *
+   * @param  {Integer}  userId
+   * @return {Object}
+   */
+  function getStories(userId) {
+    return new Promise((resolve, reject) => {
+      let getURL = `https://www.instagram.com/graphql/query/?query_hash=15463e8449a83d3d60b06be7e90627c7&variables=%7B%22reel_ids%22:%5B%22${userId}%22%5D,%22precomposed_overlay%22:false%7D`;
+
+      GM_xmlhttpRequest({
+        method: "GET",
+        url: getURL,
+        onload: function (response) {
+          try {
+            let obj = JSON.parse(response.response);
+            logger("getStories()", obj);
+            resolve(obj);
+          } catch (err) {
+            logger("getStories()", "reject", err.message);
+            reject(err);
+          }
+        },
+        onerror: function (err) {
+          logger("getStories()", "reject", err);
+          reject(err);
+        },
+      });
+    });
+  }
+
+  /**
+   * getUserId
+   * @description Get user's id with username.
+   *
+   * @param  {String}  username
+   * @return {Promise<Integer>}
+   */
+  function getUserId(username) {
+    return new Promise((resolve, reject) => {
+      let getURL = `https://www.instagram.com/web/search/topsearch/?query=${username}`;
+
+      GM_xmlhttpRequest({
+        method: "GET",
+        url: getURL,
+        onload: function (response) {
+          // Fix search issue by Discord: sno_w_
+          let obj = JSON.parse(response.response);
+          let result = null;
+          obj.users.forEach((pos) => {
+            if (pos.user.username?.toLowerCase() === username?.toLowerCase()) {
+              result = pos;
+            }
+          });
+
+          if (result != null) {
+            logger("getUserId()", result);
+            resolve(result);
+          } else {
+            getUserIdWithAgent(username)
+              .then((result) => {
+                resolve(result);
+                // eslint-disable-next-line no-unused-vars
+              })
+              .catch((err) => {
+                alert("Cannot find user info from getUserId()");
+              });
+          }
+        },
+        onerror: function (err) {
+          logger("getUserId()", "reject", err);
+          reject(err);
+        },
+      });
+    });
+  }
+
+  /**
+   * getUserIdWithAgent
+   * @description Get user's id with username.
+   *
+   * @param  {String}  username
+   * @return {Integer}
+   */
+  function getUserIdWithAgent(username) {
+    return new Promise((resolve, reject) => {
+      let getURL = `https://i.instagram.com/api/v1/users/web_profile_info/?username=${username}`;
+
+      GM_xmlhttpRequest({
+        method: "GET",
+        url: getURL,
+        headers: {
+          "X-IG-App-ID": getAppID(),
+        },
+        onload: function (response) {
+          try {
+            let obj = JSON.parse(response.response);
+            let hasUser = obj?.data?.user;
+
+            if (hasUser != null) {
+              let userInfo = obj?.data;
+              userInfo.user.pk = userInfo.user.id;
+              logger("getUserIdWithAgent()", obj);
+              resolve(userInfo);
+            } else {
+              logger("getUserIdWithAgent()", "reject", "undefined");
+              reject("undefined");
+            }
+          } catch (err) {
+            logger("getUserIdWithAgent()", "reject", err.message);
+            reject(err);
+          }
+        },
+        onerror: function (err) {
+          logger("getUserIdWithAgent()", "reject", err);
+          reject(err);
+        },
+      });
+    });
+  }
+
+  /**
+   * getUserHighSizeProfile
+   * @description Get user's high quality avatar image.
+   *
+   * @param  {Integer}  userId
+   * @return {String}
+   */
+  function getUserHighSizeProfile(userId) {
+    return new Promise((resolve, reject) => {
+      let getURL = `https://www.instagram.com/api/v1/users/${userId}/info/`;
+
+      GM_xmlhttpRequest({
+        method: "GET",
+        url: getURL,
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Linux; Android 10; Pixel 7 XL)Build/RP1A.20845.002; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/5.0 Chrome/117.0.5938.60 Mobile Safari/537.36 Instagram 307.0.0.34.111",
+        },
+        onload: function (response) {
+          try {
+            let obj = JSON.parse(response.response);
+            if (obj.status !== "ok") {
+              logger("getUserHighSizeProfile()", "reject", obj);
+              reject("faild");
+            } else {
+              logger("getUserHighSizeProfile()", obj);
+              resolve(obj.user.hd_profile_pic_url_info?.url);
+            }
+          } catch (err) {
+            logger("getUserHighSizeProfile()", "reject", err);
+            reject(err);
+          }
+        },
+        onerror: function (err) {
+          logger("getUserHighSizeProfile()", "reject", err);
+          reject(err);
+        },
+      });
+    });
+  }
+
+  /**
+   * getPostOwner
+   * @description Get post's author with post shortcode.
+   *
+   * @param  {String}  postPath
+   * @return {String}
+   */
+  function getPostOwner(postPath) {
+    return new Promise((resolve, reject) => {
+      if (!postPath) reject("NOPATH");
+      let postShortCode = postPath;
+      let getURL = `https://www.instagram.com/graphql/query/?query_hash=2c4c2e343a8f64c625ba02b2aa12c7f8&variables=%7B%22shortcode%22:%22${postShortCode}%22}`;
+
+      GM_xmlhttpRequest({
+        method: "GET",
+        url: getURL,
+        onload: function (response) {
+          try {
+            let obj = JSON.parse(response.response);
+            logger("getPostOwner()", obj);
+            resolve(obj.data.shortcode_media.owner.username);
+          } catch (err) {
+            logger("getPostOwner()", "reject", err.message);
+            reject(err);
+          }
+        },
+        onerror: function (err) {
+          logger("getPostOwner()", "reject", err);
+          reject(err);
+        },
+      });
+    });
+  }
+
+  /**
+   * getBlobMedia
+   * @description Get list of all media files in post with post shortcode.
+   *
+   * @param  {String}  postPath
+   * @return {Object}
+   */
+  function getBlobMedia(postPath) {
+    return new Promise((resolve, reject) => {
+      if (!postPath) reject("NOPATH");
+      let postShortCode = postPath;
+      let getURL = `https://www.instagram.com/graphql/query/?query_hash=2c4c2e343a8f64c625ba02b2aa12c7f8&variables=%7B%22shortcode%22:%22${postShortCode}%22}`;
+
+      GM_xmlhttpRequest({
+        method: "GET",
+        url: getURL,
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Linux; Android 10; Pixel 7 XL)Build/RP1A.20845.002; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/5.0 Chrome/117.0.5938.60 Mobile Safari/537.36 Instagram 307.0.0.34.111",
+        },
+        onload: function (response) {
+          try {
+            let obj = JSON.parse(response.response);
+            logger(obj);
+
+            if (obj.status === "fail") {
+              // alert(`Request failed with API response:\n${obj.message}: ${obj.feedback_message}`);
+              logger("Request with:", "getBlobMediaWithQuery()", postShortCode);
+              getBlobMediaWithQueryID(postShortCode)
+                .then((res) => {
+                  resolve({
+                    type: "query_id",
+                    data: res.xdt_api__v1__media__shortcode__web_info.items[0],
+                  });
+                })
+                .catch((err) => {
+                  reject(err);
+                });
+            } else {
+              resolve({ type: "query_hash", data: obj.data });
+            }
+          } catch (err) {
+            logger("getBlobMedia()", "reject", err.message);
+            reject(err);
+          }
+        },
+        onerror: function (err) {
+          logger("getBlobMedia()", "reject", err);
+          reject(err);
+        },
+      });
+    });
+  }
+
+  /**
+   * getBlobMediaWithQueryID
+   * @description Get list of all media files in post with post shortcode.
+   *
+   * @param  {String}  postPath
+   * @param  {Object}  options - silent and timeout options for automatic use
+   * @return {Object}
+   */
+  function getBlobMediaWithQueryID(postPath, options = {}) {
+    return new Promise((resolve, reject) => {
+      const silent = options.silent === true;
+      const postShortCode = String(postPath || "");
+      if (!/^[A-Za-z0-9_-]{5,64}$/.test(postShortCode)) {
+        reject(
+          createMaximumReelError(
+            "invalid_shortcode",
+            "A valid Instagram shortcode is required.",
+          ),
+        );
+        return;
+      }
+
+      const query = new URLSearchParams({
+        query_id: "9496392173716084",
+        variables: JSON.stringify({
+          shortcode: postShortCode,
+          __relay_internal__pv__PolarisFeedShareMenurelayprovider: true,
+          __relay_internal__pv__PolarisIsLoggedInrelayprovider: true,
+        }),
+      });
+      const getURL = `https://www.instagram.com/graphql/query/?${query.toString()}`;
+      const requestTimeout = Number(options.timeout);
+
+      const requestHandle = GM_xmlhttpRequest({
+        method: "GET",
+        url: getURL,
+        timeout:
+          Number.isFinite(requestTimeout) && requestTimeout > 0
+            ? Math.floor(requestTimeout)
+            : undefined,
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Linux; Android 10; Pixel 7 XL)Build/RP1A.20845.002; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/5.0 Chrome/117.0.5938.60 Mobile Safari/537.36 Instagram 307.0.0.34.111",
+          "X-IG-App-ID": getAppID(),
+        },
+        onload: function (response) {
+          try {
+            const status = Number(response.status) || 200;
+            if (status === 429) {
+              throw createMaximumReelError(
+                "rate_limited",
+                "Instagram rate-limited the metadata request.",
+                true,
+              );
+            }
+            if (status < 200 || status >= 300) {
+              throw createMaximumReelError(
+                "http_error",
+                `Instagram metadata request returned HTTP ${status}.`,
+              );
+            }
+
+            const finalUrl = String(response.finalUrl || "");
+            if (/\/(accounts\/login|challenge|checkpoint)\b/i.test(finalUrl)) {
+              throw createMaximumReelError(
+                "login_required",
+                "Instagram redirected the metadata request to a login or checkpoint.",
+              );
+            }
+
+            const responseBody =
+              response.response != null && response.response !== ""
+                ? response.response
+                : response.responseText;
+            if (
+              typeof responseBody === "string" &&
+              /^\s*</.test(responseBody)
+            ) {
+              throw createMaximumReelError(
+                "unexpected_html",
+                "Instagram returned an HTML page instead of Reel metadata.",
+              );
+            }
+
+            const obj =
+              typeof responseBody === "string"
+                ? JSON.parse(responseBody)
+                : responseBody;
+
+            if (Array.isArray(obj?.errors) && obj.errors.length) {
+              const graphQLErrorText = obj.errors
+                .map((error) =>
+                  [error?.message, error?.description, error?.code]
+                    .filter(Boolean)
+                    .join(" "),
+                )
+                .join(" ");
+              const isRateLimited =
+                /rate|limit|throttl|please wait|try again later/i.test(
+                  graphQLErrorText,
+                );
+              throw createMaximumReelError(
+                isRateLimited ? "rate_limited" : "graphql_error",
+                graphQLErrorText || "Instagram returned a GraphQL error.",
+                isRateLimited,
+              );
+            }
+
+            if (obj?.status === "fail") {
+              const feedback = [obj.message, obj.feedback_message]
+                .filter(Boolean)
+                .join(": ");
+              const isRateLimited =
+                /rate|limit|throttl|please wait|try again later/i.test(feedback);
+              const apiError = createMaximumReelError(
+                isRateLimited ? "rate_limited" : "api_failure",
+                feedback || "Instagram rejected the metadata request.",
+                isRateLimited,
+              );
+              if (!silent) {
+                alert(`getBlobMediaWithQueryID(): ${apiError.message}`);
+              }
+              throw apiError;
+            }
+
+            if (!obj?.data || typeof obj.data !== "object") {
+              throw createMaximumReelError(
+                "empty_metadata",
+                "Instagram returned no Reel metadata.",
+              );
+            }
+
+            logger("getBlobMediaWithQueryID()", "success", postShortCode);
+            resolve(obj.data);
+          } catch (err) {
+            logger(
+              "getBlobMediaWithQueryID()",
+              "reject",
+              err?.code || err?.name || "parse_failure",
+            );
+            reject(err);
+          }
+        },
+        onerror: function (err) {
+          const requestError = createMaximumReelError(
+            "network_error",
+            err?.error || "Instagram metadata request failed.",
+          );
+          logger("getBlobMediaWithQueryID()", "reject", requestError.code);
+          reject(requestError);
+        },
+        ontimeout: function () {
+          const timeoutError = createMaximumReelError(
+            "request_timeout",
+            "Instagram metadata request timed out.",
+          );
+          logger("getBlobMediaWithQueryID()", "reject", timeoutError.code);
+          reject(timeoutError);
+        },
+        onabort: function () {
+          reject(
+            createMaximumReelError(
+              "operation_cancelled",
+              "The Reel metadata request was cancelled.",
+            ),
+          );
+        },
+      });
+      options.onRequest?.(requestHandle);
+    });
+  }
+
+  /**
+   * getMediaInfo
+   * @description Get Instagram Media object.
+   *
+   * @param  {String}  mediaId
+   * @return {Object}
+   */
+  function getMediaInfo(mediaId) {
+    return new Promise((resolve, reject) => {
+      let getURL = `https://i.instagram.com/api/v1/media/${mediaId}/info/`;
+
+      if (mediaId == null) {
+        alert("Cannot call Media API because of the media id is invalid.");
+        logger(
+          "getMediaInfo()",
+          "reject",
+          "Cannot call Media API because of the media id is invalid.",
+        );
+
+        updateLoadingBar(false);
+        reject(-1);
+        return;
+      }
+      if (getAppID() == null) {
+        alert("Cannot call Media API because of the app id is invalid.");
+        logger(
+          "getMediaInfo()",
+          "reject",
+          "Cannot call Media API because of the app id is invalid.",
+        );
+        updateLoadingBar(false);
+        reject(-1);
+        return;
+      }
+
+      GM_xmlhttpRequest({
+        method: "GET",
+        url: getURL,
+        headers: {
+          "User-Agent": window.navigator.userAgent,
+          Accept: "*/*",
+          "X-IG-App-ID": getAppID(),
+        },
+        onload: function (response) {
+          if (response.finalUrl == getURL) {
+            let obj = JSON.parse(response.response);
+            logger("getMediaInfo()", obj);
+            resolve(obj);
+          } else {
+            let finalURL = new URL(response.finalUrl);
+            if (finalURL.pathname.startsWith("/accounts/login")) {
+              logger(
+                "getMediaInfo()",
+                "reject",
+                "The account must be logged in to access Media API.",
+              );
+              alert("The account must be logged in to access Media API.");
+            } else {
+              logger(
+                "getMediaInfo()",
+                "reject",
+                'Unable to retrieve content because the API was redirected to "' +
+                  response.finalUrl +
+                  '"',
+              );
+              alert(
+                'Unable to retrieve content because the API was redirected to "' +
+                  response.finalUrl +
+                  '"',
+              );
+            }
+            updateLoadingBar(false);
+            reject(-1);
+          }
+        },
+        onerror: function (err) {
+          logger("getMediaInfo()", "reject", err);
+          resolve(err);
+        },
+      });
+    });
+  }
+
+  function isMacOS() {
+    return /Macintosh|Mac OS/i.test(navigator.userAgent);
+  }
+
+  function getPlatformModifierKey() {
+    return isMacOS() ? "⌥" : "Alt";
+  }
+
+  /**
+   * getStoryId
+   * @description Obtain the media id through the resource URL.
+   *
+   * @param  {string}  url
+   * @return {string}
+   */
+  function getStoryId(url) {
+    let obj = new URL(url);
+    let base64 = obj?.searchParams?.get("ig_cache_key")?.split(".").at(0);
+    if (base64) {
+      return atob(base64);
+    } else {
+      return null;
+    }
+  }
+
+  /**
+   * getAppID
+   * @description Get Instagram App ID.
+   *
+   * @return {?integer}
+   */
+  function getAppID() {
+    let result = null;
+    $('script[type="application/json"]').each(function () {
+      const regexp = /"APP_ID":"([0-9]+)"/gi;
+      const matcher = $(this).text().match(regexp);
+      if (matcher != null && result == null) {
+        result = [...$(this).text().matchAll(regexp)];
+      }
+    });
+
+    return result ? result.at(0).at(-1) : null;
+  }
+
+  /**
+   * getTimeElementBaseDateSource
+   * @description Get the base date text source and cache key from a time element.
+   *
+   * @param  {JQuery}  $time
+   * @return {{dateText: ?string, cacheKey: ?string}}
+   */
+  function getTimeElementBaseDateSource($time) {
+    const titleText = $time.attr("title")?.trim();
+    if (titleText) {
+      return {
+        dateText: titleText,
+        cacheKey: `title:${titleText}`,
+      };
+    }
+
+    const datetime = $time.attr("datetime")?.trim();
+    if (datetime) {
+      const date = new Date(datetime);
+      if (!Number.isNaN(date.getTime())) {
+        return {
+          dateText: new Intl.DateTimeFormat(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          }).format(date),
+          cacheKey: `datetime:${datetime}`,
+        };
+      }
+    }
+
+    return {
+      dateText: null,
+      cacheKey: null,
+    };
+  }
+
+  /**
+   * getTimeElementBaseDateText
+   * @description Get the preserved absolute date text from a time element.
+   *
+   * @param  {JQuery}  $time
+   * @return {?string}
+   */
+  function getTimeElementBaseDateText($time) {
+    const preservedText = $time.attr("data-ih-original-date")?.trim();
+    const preservedKey = $time.attr("data-ih-original-date-key")?.trim();
+    const { dateText, cacheKey } = getTimeElementBaseDateSource($time);
+
+    if (
+      preservedText &&
+      preservedKey &&
+      cacheKey &&
+      preservedKey === cacheKey
+    ) {
+      return preservedText;
+    }
+
+    if (dateText && cacheKey) {
+      $time.attr("data-ih-original-date", dateText);
+      $time.attr("data-ih-original-date-key", cacheKey);
+      return dateText;
+    }
+
+    return null;
+  }
+
+  /**
+   * setTimeElementDateAndLocaleTime
+   * @description Replace time element text with absolute date and localized time.
+   *
+   * @param  {JQuery}  $time
+   * @return {void}
+   */
+  function setTimeElementDateAndLocaleTime($time) {
+    if ($time == null || $time.length === 0) {
+      return;
+    }
+
+    const datetime = $time.attr("datetime");
+    if (!datetime) {
+      return;
+    }
+
+    const date = new Date(datetime);
+    if (Number.isNaN(date.getTime())) {
+      return;
+    }
+
+    const dateText = getTimeElementBaseDateText($time);
+    if (!dateText) {
+      return;
+    }
+
+    const localeTime = new Intl.DateTimeFormat(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(date);
+
+    if (!localeTime) {
+      return;
+    }
+
+    const finalText = `${dateText} ${localeTime}`;
+
+    if ($time.text()?.trim() !== finalText) {
+      $time.text(finalText);
+      $time.css("white-space", "break-spaces");
+    }
+  }
+
+  /**
+   * getHighlightCurrentTimeElement
+   * @description Get the publish time element in the current highlight view.
+   *
+   * @param  {JQuery}  $element
+   * @return {JQuery}
+   */
+  function getHighlightCurrentTimeElement($element) {
+    if ($element == null || $element.length === 0) {
+      $element = $("body");
+    }
+
+    let $section = $element.closest("section:visible");
+    if ($section.length === 0) {
+      $section = $("body > div section:visible").last();
+    }
+
+    if ($section.length === 0) {
+      return $();
+    }
+
+    let $times = $section.find("time[datetime]").filter(function () {
+      const $time = $(this);
+
+      return (
+        $time.is(":visible") &&
+        $time.closest('a[href^="/stories/highlights/"]').length === 0 &&
+        $time.closest('[role="button"]').length === 0
+      );
+    });
+
+    if ($times.length === 0) {
+      return $();
+    }
+
+    return $times.first();
+  }
+
+  /**
+   * updateLoadingBar
+   * @description Update loading state.
+   *
+   * @param  {Boolean}  isLoading - Check if loading state
+   * @return {void}
+   */
+  function updateLoadingBar(isLoading) {
+    if (isLoading) {
+      $('div[id^="mount"] > div > div > div:first').removeClass("x1s85apg");
+      $('div[id^="mount"] > div > div > div:first').css("z-index", "20000");
+    } else {
+      $('div[id^="mount"] > div > div > div:first').addClass("x1s85apg");
+      $('div[id^="mount"] > div > div > div:first').css("z-index", "");
+    }
+  }
+
+  /**
+   * getStoryProgress
+   * @description Get the story progress of the username (post several stories).
+   *
+   * @param  {String}  username - Get progress of username
+   * @return {Object}
+   */
+  function getStoryProgress(username) {
+    let $header = $(
+      'body > div section:visible a[href^="/' + username + '"] span',
+    )
+      .filter(function () {
+        return (
+          $(this).children().length === 0 &&
+          $(this).find("svg").length === 0 &&
+          $(this).text()?.toLowerCase() === username?.toLowerCase()
+        );
+      })
+      .parents("div:not([class]):not([style])")
+      .filter(function () {
+        return $(this).text()?.toLowerCase() !== username?.toLowerCase();
+      })
+      .filter(function () {
+        return $(this).children().length > 1;
+      })
+      .first();
+
+    if ($header.length === 0) {
+      $header = $('body > div section:visible a[href^="/' + username + '"]')
+        .filter(function () {
+          return $(this).find("img").length > 0;
+        })
+        .parents("div:not([class]):not([style])")
+        .filter(function () {
+          return $(this).text()?.toLowerCase() !== username?.toLowerCase();
+        })
+        .filter(function () {
+          return $(this).children().length > 1;
+        })
+        .first();
+    }
+
+    return $header
+      .children()
+      .filter(function () {
+        return $(this).height() < 10;
+      })
+      .first()
+      .children();
+  }
+
+  /**
+   * getStoryProgressIndex
+   * @description Get the current story index and total count from Instagram's progress bar.
+   *
+   * @param  {Object}  $header - Progress bar items returned by getStoryProgress
+   * @return {?Object}
+   */
+  function getStoryProgressIndex($header) {
+    let current = 0;
+    let total = $header.length;
+
+    if (total === 0) {
+      return null;
+    }
+
+    $header.each(function (index) {
+      if ($(this).children().length > 0) {
+        current = index + 1;
+      }
+    });
+
+    if (current === 0) {
+      return null;
+    }
+
+    return { current, total };
+  }
+
+  /**
+   * setStoryProgressIndexText
+   * @description Render the current story index and total count.
+   *
+   * @param  {Object}  $element - Element to append the counter to
+   * @param  {Object}  $header - Progress bar items returned by getStoryProgress
+   * @param  {String}  className - Counter class name
+   * @return {void}
+   */
+  function setStoryProgressIndexText($element, $header, className) {
+    let progress = getStoryProgressIndex($header);
+    let $counter = $element.find("." + className).first();
+
+    if (progress == null || progress.total < 2) {
+      if ($counter.length > 0) {
+        $counter.remove();
+      }
+      return;
+    }
+
+    let text = progress.current + "/" + progress.total;
+    let title = _i18n("ITEM_POSITION")
+      .replace("%CURRENT%", progress.current)
+      .replace("%TOTAL%", progress.total);
+
+    if ($counter.length === 0) {
+      $counter = $("<div>").addClass(className);
+      $element.append($counter);
+    }
+
+    if ($counter.text() !== text) {
+      $counter.text(text);
+    }
+
+    if ($counter.attr("title") !== title) {
+      $counter.attr("title", title);
+    }
+
+    if ($counter.attr("aria-label") !== title) {
+      $counter.attr("aria-label", title);
+    }
+  }
+
+  /**
+   * setStoryProgressIndexByUsername
+   * @description Render current story index and total count from a username.
+   *
+   * @param  {Object}  $element - Element to append the counter to
+   * @param  {String}  username - Story owner's username
+   * @param  {String}  className - Counter class name
+   * @return {void}
+   */
+  function setStoryProgressIndexByUsername($element, username, className) {
+    if ($element == null || $element.length === 0 || username == null) {
+      return;
+    }
+
+    let $header = getStoryProgress(username);
+    setStoryProgressIndexText($element, $header, className);
+  }
+
+  /**
+   * setDownloadProgress
+   * @description Show and set download circle progress.
+   *
+   * @param  {Integer}  now
+   * @param  {Integer}  total
+   * @return {Void}
+   */
+  function setDownloadProgress(now, total) {
+    if ($(".circle_wrapper").length) {
+      $(".circle_wrapper span").text(`${now}/${total}`);
+
+      if (now >= total) {
+        $(".circle_wrapper").fadeOut(250, function () {
+          $(this).remove();
+        });
+      }
+    } else {
+      $("body").append(
+        `<div class="circle_wrapper"><circle></circle><span>${now}/${total}</span></div>`,
+      );
+    }
+  }
+
+  /**
+   * saveFiles
+   * @description Download the specified media URL to the computer.
+   *
+   * @param  {String}  downloadLink
+   * @param  {Object}  metadata
+   * @param  {String}  metadata.username
+   * @param  {String}  metadata.sourceType
+   * @param  {Integer}  metadata.timestamp
+   * @param  {String}  metadata.filetype
+   * @param  {String}  metadata.shortcode
+   * @param  {Integer|null}  metadata.index
+   * @param  {String|null}  metadata.uid
+   * @return {Promise}
+   */
+  function fetchBlobWithGM(downloadLink) {
+    return new Promise((resolve, reject) => {
+      GM_xmlhttpRequest({
+        method: "GET",
+        url: downloadLink,
+        responseType: "blob",
+        // Instagram media URLs are signed and do not require account cookies.
+        // Keeping this request anonymous avoids credential-related CORS behavior
+        // and prevents cookies from being sent to rotating CDN hosts.
+        anonymous: true,
+        onload: function (response) {
+          if (
+            response.status >= 200 &&
+            response.status < 300 &&
+            response.response
+          ) {
+            resolve(response.response);
+          } else {
+            reject(new Error(`HTTP ${response.status || "unknown"}`));
+          }
+        },
+        onerror: reject,
+        ontimeout: reject,
+      });
+    });
+  }
+
+  function isCrossOriginHttpURL(value) {
+    try {
+      const url = new URL(value, location.href);
+      return (
+        (url.protocol === "http:" || url.protocol === "https:") &&
+        url.origin !== location.origin
+      );
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  async function fetchMediaBlobWithFetch(downloadLink) {
+    const crossOrigin = isCrossOriginHttpURL(downloadLink);
+    const res = await fetch(downloadLink, {
+      // Signed Instagram CDN URLs work without cookies. Using "include" here
+      // makes a wildcard CORS response invalid in Firefox.
+      credentials: crossOrigin ? "omit" : "same-origin",
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.blob();
+  }
+
+  async function fetchMediaBlob(downloadLink) {
+    if (
+      isCrossOriginHttpURL(downloadLink) &&
+      typeof GM_xmlhttpRequest === "function"
+    ) {
+      try {
+        // Use the userscript request first so rotating Instagram CDN hosts do
+        // not depend on the page's CORS policy.
+        return await fetchBlobWithGM(downloadLink);
+      } catch (gmError) {
+        logger(
+          "fetchMediaBlob()",
+          "GM_xmlhttpRequest failed, retrying with credential-less fetch",
+          gmError?.message || gmError,
+        );
+      }
+    }
+
+    return await fetchMediaBlobWithFetch(downloadLink);
+  }
+
+  function isGMDownloadAvailable() {
+    return typeof GM_download === "function";
+  }
+
+  function getDownloadErrorMessage(err) {
+    return err?.error || err?.message || err?.details || String(err);
+  }
+
+  function downloadWithGM(downloadLink, filename, timeout) {
+    return new Promise((resolve, reject) => {
+      if (!isGMDownloadAvailable()) {
+        reject(new Error("GM_download is not available."));
+        return;
+      }
+
+      let settled = false;
+      let timeoutId = null;
+      let downloadTask = null;
+
+      const settle = (handler, value) => {
+        if (settled) return;
+        settled = true;
+        if (timeoutId != null) {
+          clearTimeout(timeoutId);
+        }
+        handler(value);
+      };
+
+      try {
+        downloadTask = GM_download({
+          url: downloadLink,
+          name: filename,
+          saveAs: false,
+          onload: () => settle(resolve, true),
+          onerror: (err) =>
+            settle(reject, new Error(getDownloadErrorMessage(err))),
+          ontimeout: (err) =>
+            settle(reject, new Error(getDownloadErrorMessage(err))),
+        });
+
+        if (timeout) {
+          timeoutId = setTimeout(() => {
+            if (downloadTask?.abort) {
+              downloadTask.abort();
+            }
+            settle(reject, new Error("GM_download timed out."));
+          }, timeout);
+        }
+      } catch (err) {
+        settle(reject, err);
+      }
+    });
+  }
+
+  function triggerAnchorDownload(downloadLink, filename) {
+    return new Promise((resolve, reject) => {
+      try {
+        const link = document.createElement("a");
+        link.href = downloadLink;
+        link.download = filename;
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => resolve(true), 125);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  function shouldFetchBlobBeforeDownload(metadata) {
+    return (
+      USER_SETTING.MODIFY_RESOURCE_EXIF &&
+      metadata.filetype === "jpg" &&
+      metadata.shortcode &&
+      metadata.sourceType === "photo"
+    );
+  }
+
+  function shouldModifyExifBlob(object, metadata) {
+    return (
+      shouldFetchBlobBeforeDownload(metadata) &&
+      (object.type === "image/jpeg" || object.type === "image/webp")
+    );
+  }
+
+  function saveFilenameNeedsUid() {
+    return state.fileRenameFormat.toUpperCase().includes("%UID%");
+  }
+
+  async function prepareSaveMetadata(metadata, needsUid) {
+    const prepared = { ...metadata };
+
+    if (prepared.uid == null && needsUid) {
+      const userInfo = await getUserId(prepared.username);
+      prepared.uid = userInfo?.user?.id || null;
+    }
+
+    return prepared;
+  }
+
+  async function triggerDirectDownload(downloadLink, filename) {
+    if (isGMDownloadAvailable()) {
+      try {
+        await downloadWithGM(downloadLink, filename);
+        return true;
+      } catch (err) {
+        logger(
+          "triggerDirectDownload()",
+          "GM_download failed, falling back to blob download",
+          getDownloadErrorMessage(err),
+        );
+      }
+    }
+
+    const blob = await fetchMediaBlob(downloadLink);
+    return await triggerDownload(blob, filename);
+  }
+
+  async function saveFiles(downloadLink, metadata) {
+    updateLoadingBar(true);
+    try {
+      if (!downloadLink) {
+        throw new Error("Missing download URL.");
+      }
+
+      if (!shouldFetchBlobBeforeDownload(metadata)) {
+        const preparedMetadata = await prepareSaveMetadata(
+          metadata,
+          saveFilenameNeedsUid(),
+        );
+        const downloadName = getSaveFileName(downloadLink, preparedMetadata);
+        return await triggerDirectDownload(downloadLink, downloadName);
+      }
+
+      const dwel = await fetchMediaBlob(downloadLink);
+      return await createSaveFileElement(downloadLink, dwel, metadata);
+    } catch (err) {
+      console.error("Failed to save media:", err);
+      logger("saveFiles()", "failed", err?.message || err);
+      return false;
+    } finally {
+      updateLoadingBar(false);
+    }
+  }
+
+  /**
+   * fetchArrayBuffer
+   * @description Download URL as ArrayBuffer.
+   *
+   * @param {string} url
+   * @return {Promise<ArrayBuffer>}
+   */
+  async function fetchArrayBuffer(url) {
+    updateLoadingBar(true);
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.arrayBuffer();
+    } finally {
+      updateLoadingBar(false);
+    }
+  }
+
+  /**
+   * parseDashManifest
+   * @description Parse Media API video_dash_manifest (MPD XML).
+   *              Returns best video/audio representation URLs.
+   *
+   * @param  {string} mpdXml
+   * @return {{ video: any|null, audio: any|null }}
+   */
+  function parseDashManifest(mpdXml) {
+    try {
+      if (!mpdXml || typeof mpdXml !== "string")
+        return { video: null, audio: null };
+
+      const xml = new DOMParser().parseFromString(mpdXml, "application/xml");
+      if (xml.querySelector("parsererror")) return { video: null, audio: null };
+
+      const reps = Array.from(xml.querySelectorAll("Representation"));
+      const candidates = reps
+        .map((rep) => {
+          const base = rep.querySelector("BaseURL")?.textContent?.trim();
+          if (!base) return null;
+
+          const set = rep.closest("AdaptationSet");
+          const mimeType =
+            rep.getAttribute("mimeType") || set?.getAttribute("mimeType") || "";
+          const contentType = set?.getAttribute("contentType") || "";
+          const codecs =
+            rep.getAttribute("codecs") || set?.getAttribute("codecs") || "";
+          const bandwidth =
+            parseInt(rep.getAttribute("bandwidth") || "0", 10) || 0;
+          const width = parseInt(rep.getAttribute("width") || "0", 10) || 0;
+          const height = parseInt(rep.getAttribute("height") || "0", 10) || 0;
+          const id = rep.getAttribute("id") || "";
+
+          return {
+            id,
+            url: base,
+            mimeType,
+            contentType,
+            codecs,
+            bandwidth,
+            width,
+            height,
+          };
+        })
+        .filter(Boolean);
+
+      const isVideo = (c) =>
+        (c.contentType || "").includes("video") ||
+        (c.mimeType || "").startsWith("video");
+      const isAudio = (c) =>
+        (c.contentType || "").includes("audio") ||
+        (c.mimeType || "").startsWith("audio");
+
+      const bestVideo =
+        candidates
+          .filter(isVideo)
+          .sort(
+            (a, b) =>
+              b.height - a.height ||
+              b.bandwidth - a.bandwidth ||
+              b.width - a.width,
+          )[0] || null;
+
+      const bestAudio =
+        candidates
+          .filter(isAudio)
+          .sort((a, b) => b.bandwidth - a.bandwidth)[0] || null;
+
+      return { video: bestVideo, audio: bestAudio };
+    } catch (e) {
+      logger("[DASH]", "parseDashManifest() error:", e);
+      return { video: null, audio: null };
+    }
+  }
+
+  /**
+   * muxDashVideoAudioToMp4
+   * @description Mux DASH video+audio into one MP4 using Mediabunny (demux + mux).
+   *
+   * @param {ArrayBuffer} videoBuf
+   * @param {ArrayBuffer} audioBuf
+   * @return {Promise<ArrayBuffer>}
+   */
+  async function muxDashVideoAudioToMp4(videoBuf, audioBuf) {
+    const MB = Mediabunny;
+
+    const videoInput = new MB.Input({
+      formats: [MB.MP4],
+      source: new MB.BufferSource(videoBuf),
+    });
+    const audioInput = new MB.Input({
+      formats: [MB.MP4],
+      source: new MB.BufferSource(audioBuf),
+    });
+
+    const vTrack = await videoInput.getPrimaryVideoTrack();
+    if (!vTrack || !vTrack.codec) throw new Error("No video track found");
+
+    const aTrack = await audioInput.getPrimaryAudioTrack();
+    if (!aTrack || !aTrack.codec) throw new Error("No audio track found");
+
+    const vSink = new MB.EncodedPacketSink(vTrack);
+    const aSink = new MB.EncodedPacketSink(aTrack);
+
+    const output = new MB.Output({
+      format: new MB.Mp4OutputFormat({ fastStart: "in-memory" }),
+      target: new MB.BufferTarget(),
+    });
+
+    const vSource = new MB.EncodedVideoPacketSource(vTrack.codec);
+    const aSource = new MB.EncodedAudioPacketSource(aTrack.codec);
+
+    output.addVideoTrack(vSource, { rotation: vTrack.rotation || 0 });
+    output.addAudioTrack(aSource);
+
+    await output.start();
+
+    const vDecoderConfig = await vTrack.getDecoderConfig();
+    const aDecoderConfig = await aTrack.getDecoderConfig();
+
+    const vMeta = vDecoderConfig
+      ? { decoderConfig: vDecoderConfig }
+      : undefined;
+    const aMeta = aDecoderConfig
+      ? { decoderConfig: aDecoderConfig }
+      : undefined;
+
+    const vIter = vSink.packets();
+    const aIter = aSink.packets();
+
+    let vNext = await vIter.next();
+    let aNext = await aIter.next();
+    let vSentMeta = false;
+    let aSentMeta = false;
+
+    while (!vNext.done || !aNext.done) {
+      const takeVideo = (() => {
+        if (vNext.done) return false;
+        if (aNext.done) return true;
+        return vNext.value.timestamp <= aNext.value.timestamp;
+      })();
+
+      if (takeVideo) {
+        await vSource.add(vNext.value, vSentMeta ? undefined : vMeta);
+        vSentMeta = true;
+        vNext = await vIter.next();
+      } else {
+        await aSource.add(aNext.value, aSentMeta ? undefined : aMeta);
+        aSentMeta = true;
+        aNext = await aIter.next();
+      }
+    }
+
+    await output.finalize();
+
+    const outBuf = output.target.buffer;
+    if (outBuf instanceof ArrayBuffer) return outBuf;
+    if (outBuf && outBuf.buffer) {
+      return outBuf.buffer.slice(
+        outBuf.byteOffset,
+        outBuf.byteOffset + outBuf.byteLength,
+      );
+    }
+    throw new Error("Unexpected output buffer type");
+  }
+
+  async function downloadDashStreams(
+    videoUrl,
+    audioUrl,
+    username,
+    sourceType,
+    timestamp,
+    shortcode,
+  ) {
+    logger("[DASH]", "downloadDashStreams()", {
+      videoUrl: videoUrl,
+      audioUrl: audioUrl || null,
+      sourceType,
+      shortcode,
+    });
+
+    if (!audioUrl) {
+      logger(
+        "[DASH]",
+        "Downloaded DASH video only (no audio rep / has_audio=false).",
+      );
+      return await saveFiles(videoUrl, {
+        username,
+        sourceType,
+        timestamp,
+        filetype: "mp4",
+        shortcode,
+      });
+    }
+
+    try {
+      logger("[DASH]", "Fetching DASH streams for mux...");
+      const [vBuf, aBuf] = await Promise.all([
+        fetchArrayBuffer(videoUrl),
+        fetchArrayBuffer(audioUrl),
+      ]);
+
+      logger(
+        "[DASH]",
+        "Muxing DASH video+audio into one MP4 (mp4box main thread)...",
+      );
+      const mergedBuf = await muxDashVideoAudioToMp4(vBuf, aBuf);
+      const mergedBlob = new Blob([mergedBuf], { type: "video/mp4" });
+
+      const downloadStarted = await createSaveFileElement(videoUrl, mergedBlob, {
+        username,
+        sourceType,
+        timestamp,
+        filetype: "mp4",
+        shortcode,
+      });
+      logger("[DASH]", "Merged MP4 download triggered.");
+      return downloadStarted;
+    } catch (e) {
+      logger(
+        "[DASH]",
+        "Mux failed -> fallback to separate downloads",
+        e?.message || e,
+      );
+      const videoDownloadStarted = await saveFiles(videoUrl, {
+        username,
+        sourceType,
+        timestamp,
+        filetype: "mp4",
+        shortcode,
+      });
+      const audioDownloadStarted = await saveFiles(audioUrl, {
+        username,
+        sourceType,
+        timestamp,
+        filetype: "m4a",
+        shortcode,
+      });
+      return videoDownloadStarted && audioDownloadStarted;
+    }
+  }
+
+  /**
+   * tryHandleDashFromMediaItem
+   * @description Centralized DASH handling for Media API items.
+   *              Uses video_dash_manifest when present.
+   *              Picks best video by resolution (height/width), then bandwidth.
+   *              Audio is optional.
+   *
+   * @return {Promise<boolean>} true if DASH path handled it, false to let caller fallback.
+   */
+  async function tryHandleDashFromMediaItem({
+    mediaItem,
+    username,
+    sourceType,
+    timestamp,
+    shortcode,
+    isPreview,
+    index,
+  }) {
+    try {
+      if (!USER_SETTING.PREFER_DASH_MANIFEST) return false;
+      if (!USER_SETTING.FORCE_RESOURCE_VIA_MEDIA) return false;
+      if (!mediaItem?.video_dash_manifest) return false;
+      if (!mediaItem?.video_versions) return false;
+
+      const best = parseDashManifest(mediaItem.video_dash_manifest);
+      const vUrl = best?.video?.url || "";
+      const aUrl = best?.audio?.url || "";
+
+      if (!vUrl) {
+        return false;
+      }
+
+      logger("[DASH]", "best reps selected", {
+        video: best.video
+          ? {
+              height: best.video.height,
+              width: best.video.width,
+              bandwidth: best.video.bandwidth,
+              codecs: best.video.codecs,
+            }
+          : null,
+        audio: best.audio
+          ? { bandwidth: best.audio.bandwidth, codecs: best.audio.codecs }
+          : "(none)",
+      });
+
+      if (isPreview) {
+        openNewTab(vUrl);
+        return true;
+      }
+
+      if (!aUrl) {
+        logger("[DASH]", "download mode -> VIDEO-ONLY DASH (no audio rep)");
+        return await saveFiles(vUrl, {
+          username,
+          sourceType,
+          timestamp,
+          filetype: "mp4",
+          shortcode,
+          index,
+        });
+      }
+
+      logger("[DASH]", "download mode -> DASH video+audio");
+      return await downloadDashStreams(
+        vUrl,
+        aUrl,
+        username,
+        sourceType,
+        timestamp,
+        shortcode,
+      );
+    } catch (e) {
+      logger(
+        "[DASH]",
+        "tryHandleDashFromMediaItem failed -> fallback",
+        e?.message || e,
+      );
+      return false;
+    }
+  }
+
+  /**
+   * @description Trigger download from Blob with filename.
+   *
+   * @param {Blob} blob
+   * @param {string} filename
+   * @return {Promise<boolean>}
+   */
+  async function triggerDownload(blob, filename) {
+    const objectUrl = URL.createObjectURL(blob);
+    let revoked = false;
+
+    const revokeObjectUrl = () => {
+      if (revoked) return;
+      revoked = true;
+      URL.revokeObjectURL(objectUrl);
+    };
+
+    try {
+      if (isGMDownloadAvailable()) {
+        try {
+          await downloadWithGM(
+            objectUrl,
+            filename,
+            gmDownloadObjectUrlTimeout,
+          );
+          revokeObjectUrl();
+          return true;
+        } catch (err) {
+          logger(
+            "triggerDownload()",
+            "GM_download failed for blob URL, falling back to anchor download",
+            getDownloadErrorMessage(err),
+          );
+        }
+      }
+
+      await triggerAnchorDownload(objectUrl, filename);
+      setTimeout(revokeObjectUrl, objectUrlRevokeDelay);
+      return true;
+    } catch (err) {
+      revokeObjectUrl();
+      throw err;
+    }
+  }
+
+  /**
+   * getSaveFileName
+   * @description Get the file name for downloaded media according to the user settings and resource information.
+   *
+   * @param  {String}  downloadLink
+   * @param  {Object}  metadata
+   * @param  {String}  metadata.username
+   * @param  {String}  metadata.sourceType
+   * @param  {Integer}  metadata.timestamp
+   * @param  {String}  metadata.filetype
+   * @param  {String}  metadata.shortcode
+   * @param  {Integer|null}  metadata.index
+   * @param  {String|null}  metadata.uid
+   * @return {String}  The generated filename
+   */
+  function getSaveFileName(downloadLink, metadata) {
+    let { username, sourceType, timestamp, filetype, shortcode, index, uid } =
+      metadata;
+    timestamp = parseInt(timestamp.toString().padEnd(13, "0"));
+    index = index != null ? index : 0;
+
+    const date = new Date(timestamp);
+
+    const original_name = new URL(downloadLink).pathname
+      .split("/")
+      .at(-1)
+      .split(".")
+      .slice(0, -1)
+      .join(".");
+    const year = date.getFullYear().toString();
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const day = date.getDate().toString().padStart(2, "0");
+    const hour = date.getHours().toString().padStart(2, "0");
+    const minute = date.getMinutes().toString().padStart(2, "0");
+    const second = date.getSeconds().toString().padStart(2, "0");
+
+    var filename = state.fileRenameFormat.replace(
+      /%([^%]+)%/g,
+      (match, content) => {
+        return `%${content.toUpperCase()}%`;
+      },
+    );
+
+    var replacements = {
+      "%USERNAME%": username,
+      "%SOURCE_TYPE%": sourceType,
+      "%SHORTCODE%": shortcode || "",
+      "%YEAR%": year,
+      "%2-YEAR%": year.substr(-2),
+      "%MONTH%": month,
+      "%DAY%": day,
+      "%HOUR%": hour,
+      "%MINUTE%": minute,
+      "%SECOND%": second,
+      "%ORIGINAL_NAME%": original_name,
+      "%ORIGINAL_NAME_FIRST%": original_name.split("_").at(0),
+      "%INDEX%": index.toString(),
+      "%UID%": uid || "",
+    };
+
+    // eslint-disable-next-line no-useless-escape
+    filename = filename.replace(/%[\w\-]+%/g, function (str) {
+      if (replacements[str] == null) {
+        return str;
+      }
+
+      return replacements[str];
+    });
+
+    const originally = username + "_" + original_name + "." + filetype;
+    const downloadName = USER_SETTING.AUTO_RENAME
+      ? filename + "." + filetype
+      : originally;
+
+    return downloadName;
+  }
+
+  /**
+   * createSaveFileElement
+   * @description Download the specified media with link element.
+   *
+   * @param  {String}  downloadLink
+   * @param  {Object}  object
+   * @param  {Object}  metadata
+   * @param  {String}  metadata.username
+   * @param  {String}  metadata.sourceType
+   * @param  {Integer}  metadata.timestamp
+   * @param  {String}  metadata.filetype
+   * @param  {String}  metadata.shortcode
+   * @param  {Integer|null}  metadata.index
+   * @param  {String|null}  metadata.uid
+   * @return {Promise<boolean>}
+   */
+  async function createSaveFileElement(downloadLink, object, metadata) {
+    const shouldModifyExif = shouldModifyExifBlob(object, metadata);
+    const preparedMetadata = await prepareSaveMetadata(
+      metadata,
+      shouldModifyExif || saveFilenameNeedsUid(),
+    );
+
+    const downloadName = getSaveFileName(downloadLink, preparedMetadata);
+
+    if (shouldModifyExif) {
+      try {
+        const newBlob = await changeExifData(object, preparedMetadata);
+        return await triggerDownload(newBlob, downloadName);
+      } catch (err) {
+        console.error(
+          "Failed to strip EXIF and/or attach post URL to EXIF.",
+          err,
+        );
+        return await triggerDownload(object, downloadName);
+      }
+    }
+
+    return await triggerDownload(object, downloadName);
+  }
+
+  /**
+   * changeExifData
+   * @description Strips EXIF metadata and attaches post URLs to the EXIF of downloaded image resources.
+   *
+   * @param  {Object}  blob
+   * @param  {Object}  metadata
+   * @param  {String}  metadata.username
+   * @param  {String}  metadata.sourceType
+   * @param  {Integer}  metadata.timestamp
+   * @param  {String}  metadata.filetype
+   * @param  {String}  metadata.shortcode
+   * @param  {Integer|null}  metadata.index
+   * @param  {String}  metadata.uid
+   * @return {Blob}
+   */
+  async function changeExifData(blob, metadata) {
+    const concat = (...arr) => {
+      const len = arr.reduce((s, a) => s + a.length, 0);
+      const out = new Uint8Array(len);
+      let p = 0;
+      for (const a of arr) {
+        out.set(a, p);
+        p += a.length;
+      }
+      return out;
+    };
+    const u32le = (v) => {
+      const b = new Uint8Array(4);
+      new DataView(b.buffer).setUint32(0, v, true);
+      return b;
+    };
+    const u16le = (v) => {
+      const b = new Uint8Array(2);
+      new DataView(b.buffer).setUint16(0, v, true);
+      return b;
+    };
+    const enc = (s) => new TextEncoder().encode(s);
+    const encUtf16le = (s) => {
+      const out = new Uint8Array(s.length * 2);
+      for (let i = 0; i < s.length; i++) {
+        const code = s.charCodeAt(i);
+        out[i * 2] = code & 0xff;
+        out[i * 2 + 1] = (code >> 8) & 0xff;
+      }
+      return out;
+    };
+    const formatExifDate = (ts) => {
+      let parsed = Number(ts);
+      if (!Number.isFinite(parsed)) {
+        parsed = Date.now();
+      }
+      if (parsed < 1e12) {
+        parsed *= 1000;
+      }
+
+      const date = new Date(parsed);
+      if (Number.isNaN(date.getTime())) {
+        return "1970:01:01 00:00:00";
+      }
+
+      const y = String(date.getFullYear()).padStart(4, "0");
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      const hh = String(date.getHours()).padStart(2, "0");
+      const mm = String(date.getMinutes()).padStart(2, "0");
+      const ss = String(date.getSeconds()).padStart(2, "0");
+      return `${y}:${m}:${d} ${hh}:${mm}:${ss}`;
+    };
+    const makeIFDEntry = (tag, type, count, valueOrOffset) =>
+      concat(u16le(tag), u16le(type), u32le(count), u32le(valueOrOffset));
+    const fourCC = (dv, o) =>
+      String.fromCharCode(
+        dv.getUint8(o),
+        dv.getUint8(o + 1),
+        dv.getUint8(o + 2),
+        dv.getUint8(o + 3),
+      );
+
+    const head = new Uint8Array(await blob.slice(0, 12).arrayBuffer());
+    const isJPEG = head[0] === 0xff && head[1] === 0xd8;
+    const isWEBP =
+      head.length >= 12 &&
+      String.fromCharCode(...head.subarray(0, 4)) === "RIFF" &&
+      String.fromCharCode(...head.subarray(8, 12)) === "WEBP";
+    if (!isJPEG && !isWEBP) throw new Error("Not a JPEG or WEBP");
+
+    const exifDateString = `${formatExifDate(metadata.timestamp)}\0`;
+    const username = `${(metadata.username || "unknown").toString()}\0`;
+    const url = `https://www.instagram.com/p/${metadata.shortcode}/`;
+    const commentUrl = `https://www.instagram.com/uid/${metadata.uid || "unknown"}`;
+
+    const dateBytes = enc(exifDateString);
+    const artistBytes = enc(username);
+    const keywordBytes = encUtf16le(`${url}\0`);
+    const xpCommentBytes = encUtf16le(`${commentUrl}\0`);
+
+    const exifPrefix = enc("Exif\0\0");
+    const tiffHeader = Uint8Array.from([
+      0x49, 0x49, 0x2a, 0x00, 0x08, 0x00, 0x00, 0x00,
+    ]);
+
+    const ifd0Count = 4;
+    const exifIfdCount = 1;
+
+    const ifd0Size = 2 + ifd0Count * 12 + 4;
+    const exifIfdOffset = 8 + ifd0Size;
+    const exifIfdSize = 2 + exifIfdCount * 12 + 4;
+    const dataStartOffset = 8 + ifd0Size + exifIfdSize;
+
+    const artistOffset = dataStartOffset;
+    const keywordOffset = artistOffset + artistBytes.length;
+    const xpCommentOffset = keywordOffset + keywordBytes.length;
+    const dateOffset = xpCommentOffset + xpCommentBytes.length;
+
+    const ifd0 = concat(
+      u16le(ifd0Count),
+      makeIFDEntry(0x013b, 2, artistBytes.length, artistOffset), // Artist
+      makeIFDEntry(0x8769, 4, 1, exifIfdOffset), // Exif Offset
+      makeIFDEntry(0x9c9c, 1, xpCommentBytes.length, xpCommentOffset), // XPComment
+      makeIFDEntry(0x9c9e, 1, keywordBytes.length, keywordOffset), // XPKeywords
+      u32le(0),
+    );
+
+    const exifIfd = concat(
+      u16le(exifIfdCount),
+      makeIFDEntry(0x9003, 2, dateBytes.length, dateOffset),
+      u32le(0),
+    );
+
+    const tiffBody = concat(
+      tiffHeader,
+      ifd0,
+      exifIfd,
+      artistBytes,
+      keywordBytes,
+      xpCommentBytes,
+      dateBytes,
+    );
+
+    if (isJPEG) {
+      const ab = await blob.arrayBuffer();
+      const dv = new DataView(ab);
+      const app1Body = concat(exifPrefix, tiffBody);
+      const app1Header = new Uint8Array(4);
+      new DataView(app1Header.buffer).setUint16(0, 0xffe1);
+      new DataView(app1Header.buffer).setUint16(2, app1Body.length + 2);
+      const newAPP1 = concat(app1Header, app1Body);
+
+      const parts = [new Uint8Array(ab, 0, 2)];
+      let off = 2,
+        added = false;
+      while (off < dv.byteLength) {
+        const marker = dv.getUint16(off);
+        if ((marker & 0xff00) !== 0xff00) break;
+        if (marker === 0xffda) {
+          if (!added) parts.push(newAPP1);
+          parts.push(new Uint8Array(ab, off));
+          break;
+        }
+        const len = dv.getUint16(off + 2) + 2;
+        if (marker === 0xffe1) {
+          off += len;
+          continue;
+        }
+        parts.push(new Uint8Array(ab, off, len));
+        off += len;
+      }
+      const total = parts.reduce((s, a) => s + a.length, 0);
+      const out = new Uint8Array(total);
+      let p = 0;
+      parts.forEach((a) => {
+        out.set(a, p);
+        p += a.length;
+      });
+      return new Blob([out], {
+        type: "image/jpeg",
+      });
+    }
+
+    const ab = await blob.arrayBuffer();
+    const dv = new DataView(ab);
+    const chunks = [];
+    let vp8xIdx = -1;
+    let offset = 12;
+    while (offset < dv.byteLength) {
+      const cc = fourCC(dv, offset);
+      const sz = dv.getUint32(offset + 4, true);
+      const pad = sz & 1;
+      const full = 8 + sz + pad;
+      if (cc !== "EXIF" && cc !== "XMP ") {
+        chunks.push(new Uint8Array(ab, offset, full));
+        if (cc === "VP8X") vp8xIdx = chunks.length - 1;
+      }
+      offset += full;
+    }
+    let exifChunk = concat(
+      enc("EXIF"),
+      u32le(exifPrefix.length + tiffBody.length),
+      exifPrefix,
+      tiffBody,
+    );
+    if (exifChunk.length & 1) exifChunk = concat(exifChunk, Uint8Array.of(0));
+    if (vp8xIdx !== -1) {
+      const vp8x = new Uint8Array(chunks[vp8xIdx]);
+      vp8x[8] |= 0x10;
+      chunks[vp8xIdx] = vp8x;
+      chunks.splice(vp8xIdx + 1, 0, exifChunk);
+    } else {
+      chunks.push(exifChunk);
+    }
+    const payload = chunks.reduce((s, c) => s + c.length, 0);
+    const riffHeader = concat(enc("RIFF"), u32le(payload + 4), enc("WEBP"));
+    const finalBuf = concat(riffHeader, ...chunks);
+    return new Blob([finalBuf], {
+      type: "image/webp",
+    });
+  }
+
+  /**
+   * triggerLinkElement
+   * @description Trigger the link element to start downloading the resource.
+   *
+   * @param  {Object}  element
+   * @return {Promise<boolean>}
+   */
+  async function triggerLinkElement(element, isPreview) {
+    try {
+      if (!element) {
+        throw new Error("Missing link element.");
+      }
+
+      let date = new Date().getTime();
+      let timestamp = Math.floor(date / 1000);
+      let username = $(element).attr("data-username")
+        ? $(element).attr("data-username")
+        : state.GL_username;
+      let index = $(element).attr("data-globalindex") || 0;
+
+      if (!username && $(element).attr("data-path")) {
+        logger(
+          "catching owner name from shortcode:",
+          $(element).attr("data-href"),
+        );
+        username = await getPostOwner($(element).attr("data-path")).catch(
+          (err) => {
+            logger(
+              "get username failed, replace with default string, error message:",
+              err.message,
+            );
+          },
+        );
+
+        if (username == null) {
+          username = "NONE";
+        }
+      }
+
+      if (USER_SETTING.RENAME_PUBLISH_DATE && $(element).attr("datetime")) {
+        timestamp = parseInt($(element).attr("datetime"));
+      }
+
+      let mediaId = $(element).attr("media-id");
+
+      if (
+        USER_SETTING.PREFER_DASH_MANIFEST &&
+        state.GL_mediaDataCache[mediaId] &&
+        !isPreview
+      ) {
+        logger(
+          "[Video Dash Stream]",
+          "Processing video with DASH manifest, mediaId:",
+          mediaId,
+        );
+        const handled = await tryHandleDashFromMediaItem({
+          mediaItem: state.GL_mediaDataCache[mediaId],
+          username,
+          sourceType: $(element).data("name"),
+          timestamp,
+          shortcode: $(element).data("path"),
+          isPreview: false,
+          index,
+        });
+        if (handled) {
+          return true;
+        }
+      }
+
+      if (USER_SETTING.CAPTURE_IMAGE_VIA_MEDIA_CACHE) {
+        const cached = getImageFromCache(mediaId);
+        if (cached && $(element).data("type") != "mp4") {
+          if (isPreview) {
+            openNewTab(cached);
+            return true;
+          } else {
+            return await saveFiles(cached, {
+              username,
+              sourceType: $(element).data("name"),
+              timestamp,
+              filetype: $(element).data("type") || "jpg",
+              shortcode: $(element).data("path"),
+              index,
+            });
+          }
+        }
+      }
+
+      if (USER_SETTING.FORCE_RESOURCE_VIA_MEDIA) {
+        updateLoadingBar(true);
+        let result = await getMediaInfo($(element).attr("media-id"));
+        updateLoadingBar(false);
+
+        if (result.status === "ok") {
+          var resource_url = null;
+          if (result.items[0].video_versions) {
+            resource_url = result.items[0].video_versions[0].url;
+          } else {
+            result.items[0].image_versions2.candidates.sort(function (a, b) {
+              let aSTP = new URL(a.url).searchParams.get("stp");
+              let bSTP = new URL(b.url).searchParams.get("stp");
+
+              if (aSTP && bSTP) {
+                if (aSTP.length > bSTP.length) return 1;
+                if (aSTP.length < bSTP.length) return -1;
+              } else {
+                if (a.width < b.width) return 1;
+                if (a.width > b.width) return -1;
+              }
+
+              return 0;
+            });
+
+            resource_url = result.items[0].image_versions2.candidates[0].url;
+
+            const getWidthFromURL = function (obj) {
+              if (obj.width != null) {
+                return obj.width;
+              }
+
+              const url = new URL(obj.url);
+              const stp = url.searchParams.get("stp");
+
+              if (stp != null) {
+                return parseInt(
+                  stp.match(/_p([0-9]+)x([0-9]+)_/i)?.at(1) || -1,
+                );
+              } else {
+                return 0;
+              }
+            };
+
+            const resourceWidth = getWidthFromURL(
+              result.items[0].image_versions2.candidates[0],
+            );
+            if (
+              result.items[0].original_width !== resourceWidth &&
+              resourceWidth !== -1
+            ) {
+              // alert();
+            }
+          }
+
+          if (isPreview) {
+            openNewTab(replaceSameOriginHost(resource_url));
+            return true;
+          } else {
+            return await saveFiles(resource_url, {
+              username,
+              sourceType: $(element).attr("data-name"),
+              timestamp,
+              filetype: $(element).attr("data-type"),
+              shortcode: $(element).attr("data-path"),
+            });
+          }
+        } else {
+          if (USER_SETTING.FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED) {
+            if (isPreview) {
+              const fallbackHref = $(element).attr("data-href");
+              if (!fallbackHref) {
+                throw new Error("Missing fallback data-href.");
+              }
+              openNewTab(replaceSameOriginHost(fallbackHref));
+              return true;
+            } else {
+              const fallbackHref = $(element).attr("data-href");
+              if (!fallbackHref) {
+                throw new Error("Missing fallback data-href.");
+              }
+              return await saveFiles(fallbackHref, {
+                username,
+                sourceType: $(element).attr("data-name"),
+                timestamp,
+                filetype: $(element).attr("data-type"),
+                shortcode: $(element).attr("data-path"),
+              });
+            }
+          } else {
+            alert(
+              "Fetch failed from Media API. API response message: " +
+                result.message,
+            );
+            return false;
+          }
+          logger(result);
+        }
+      } else {
+        const href = $(element).attr("data-href");
+        if (!href) {
+          throw new Error("Missing data-href.");
+        }
+        return await saveFiles(href, {
+          username,
+          sourceType: $(element).attr("data-name"),
+          timestamp,
+          filetype: $(element).attr("data-type"),
+          shortcode: $(element).attr("data-path"),
+        });
+      }
+    } catch (err) {
+      console.error("Occur error in triggerLinkElement:", err);
+      logger("Occur error in triggerLinkElement:", err);
+      return false;
+    }
+  }
+
+  /**
+   * replaceSameOriginHost
+   * @description Replace the host of the URL to bypass the same-origin policy for certain video resources that cannot be downloaded directly.
+   *
+   * @param  {string}  url
+   * @return {string}
+   */
+  function replaceSameOriginHost(url) {
+    // replace https://instagram.ftpe8-2.fna.fbcdn.net/ to https://scontent.cdninstagram.com/ becase of same origin policy (some video)
+    var urlObj = new URL(url);
+    urlObj.host = "scontent.cdninstagram.com";
+
+    return urlObj.href;
+  }
+
+  /**
+   * checkingScriptUpdate
+   * @description Check if there is a new version of the script and push notification.
+   *
+   * @param  {Integer}  interval
+   * @return {void}
+   */
+  function checkingScriptUpdate(interval) {
+    if (!USER_SETTING.CHECK_FOR_UPDATE) return;
+
+    const check_timestamp =
+      GM_getValue("G_CHECK_TIMESTAMP") ?? new Date().getTime();
+    const now_time = new Date().getTime();
+
+    if (now_time > parseInt(check_timestamp) + interval * 1000) {
+      GM_setValue("G_CHECK_TIMESTAMP", new Date().getTime());
+      callNotification();
+    }
+  }
+
+  /**
+   * callNotification
+   * @description Call desktop notification by browser.
+   *
+   * @return {void}
+   */
+  function callNotification() {
+    const currentVersion = GM_info.script.version;
+
+    GM_xmlhttpRequest({
+      method: "GET",
+      url: REMOTE_SCRIPT_URL,
+      onload: function (response) {
+        const remoteScript = response.responseText;
+        const match = remoteScript.match(
+          /\/\/\s+@version\s+([0-9.\-a-zA-Z]+)/i,
+        );
+
+        if (match && match[1]) {
+          const remoteVersion = match[1];
+          logger(
+            "Current version: ",
+            currentVersion,
+            "|",
+            "Remote version: ",
+            remoteVersion,
+          );
+
+          if (remoteVersion !== currentVersion) {
+            GM_notification({
+              text: _i18n("NOTICE_UPDATE_CONTENT"),
+              title: _i18n("NOTICE_UPDATE_TITLE"),
+              tag: "insta_controls_notice",
+              highlight: true,
+              timeout: 5000,
+              zombieTimeout: 5000,
+              image:
+                "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Instagram_icon.png/64px-Instagram_icon.png",
+              onclick: (event) => {
+                event?.preventDefault();
+                var w = GM_openInTab(GM_info.script.downloadURL);
+                setTimeout(() => {
+                  w.close();
+                }, 250);
+              },
+            });
+          } else {
+            logger("there is no new update");
+          }
+        } else {
+          console.error("Could not find version in the remote script.");
+        }
+      },
+    });
+  }
+
+  /**
+   * openNewTab
+   * @description Open URL in new tab.
+   *
+   * @param  {String}  link
+   * @return {void}
+   */
+  function openNewTab(link) {
+    var a = document.createElement("a");
+    a.href = link;
+    a.target = "_blank";
+
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    setTimeout(() => {
+      updateLoadingBar(false);
+    }, 125);
+  }
+
+  /**
+   * reloadScript
+   * @description Re-register main timer.
+   *
+   * @return {void}
+   */
+  function reloadScript() {
+    clearInterval(state.GL_repeat);
+
+    // unregister event in post element
+    state.GL_registerEventList.forEach((item) => {
+      item.trigger.forEach((bindElement) => {
+        $(item.element).off("click", bindElement);
+      });
+    });
+    state.GL_registerEventList = [];
+
+    $(".button_wrapper").remove();
+    $(
+      ".IG_DWPROFILE, .IG_DWPROFILE, .IG_DWSTORY, .IG_DWSTORY_ALL, .IG_DWSTORY_THUMBNAIL, .IG_DWSTORY_POSITION, .IG_DWNEWTAB, .IG_DWHISTORY, .IG_DWHISTORY_ALL, .IG_DWHINEWTAB, .IG_DWHISTORY_THUMBNAIL, .IG_DWHISTORY_POSITION, .IG_REELS, .IG_REELS_NEWTAB, .IG_REELS_THUMBNAIL",
+    ).remove();
+    $("[data-snig]").removeAttr("data-snig");
+
+    state.pageLoaded = false;
+    state.firstStarted = false;
+    state.currentURL = location.href;
+    state.GL_observer.disconnect();
+
+    logger("main timer re-register completed");
+  }
+
+  /**
+   * logger
+   * @description Event record.
+   *
+   * @return {void}
+   */
+  function logger(...messages) {
+    var dd = new Date();
+    state.GL_logger.push({
+      time: dd.getTime(),
+      content: [...messages],
+    });
+
+    if (state.GL_logger.length > 1000) {
+      state.GL_logger = [
+        {
+          time: dd.getTime(),
+          content: ["logger sliced"],
+        },
+        ...state.GL_logger.slice(-999),
+      ];
+    }
+
+    if (ENABLE_CONSOLE_LOGGING) {
+      console.log(`[${dd.toISOString()}]`, ...messages);
+    }
+  }
+
+  /**
+   * initSettings
+   * @description Initialize preferences.
+   *
+   * @return {void}
+   */
+  function initSettings() {
+    for (let name in USER_SETTING) {
+      if (GM_getValue(name) != null && typeof GM_getValue(name) === "boolean") {
+        USER_SETTING[name] = GM_getValue(name);
+
+        if (name === "MODIFY_VIDEO_VOLUME" && GM_getValue(name) !== true) {
+          state.videoVolume = 1;
+        }
+      }
+    }
+  }
+
+  /**
+   * toggleVolumeSilder
+   * @description Toggle display of custom volume slider.
+   *
+   * @param  {object}  $videos
+   * @param  {object}  $buttonParent
+   * @param  {string}  loggerType
+   * @param  {string}  customClass
+   * @return {void}
+   */
+  function toggleVolumeSilder(
+    $videos,
+    $buttonParent,
+    loggerType,
+    customClass = "",
+  ) {
+    if ($buttonParent.find("div.volume_slider").length === 0) {
+      $buttonParent.append(`<div class="volume_slider ${customClass}" />`);
+      $buttonParent
+        .find("div.volume_slider")
+        .append(
+          `<div><input type="range" max="1" min="0" step="0.05" value="${state.videoVolume}" /></div>`,
+        );
+      $buttonParent
+        .find("div.volume_slider input")
+        .attr("style", `--ig-track-progress: ${state.videoVolume * 100 + "%"}`);
+      $buttonParent.find("div.volume_slider input").on("input", function () {
+        var percent = $(this).val() * 100 + "%";
+
+        state.videoVolume = $(this).val();
+        GM_setValue("G_VIDEO_VOLUME", $(this).val());
+
+        $(this).attr("style", `--ig-track-progress: ${percent}`);
+
+        $videos.each(function () {
+          logger(`(${loggerType})`, "video volume changed #slider");
+          this.volume = state.videoVolume;
+        });
+      });
+
+      $buttonParent
+        .find("div.volume_slider input")
+        .on("mouseenter", function () {
+          var percent = state.videoVolume * 100 + "%";
+          $(this).attr("style", `--ig-track-progress: ${percent}`);
+          $(this).val(state.videoVolume);
+
+          $videos.each(function () {
+            logger(`(${loggerType})`, "video volume changed #slider");
+            this.volume = state.videoVolume;
+          });
+        });
+
+      $buttonParent.find("div.volume_slider").on("click", function (e) {
+        e.stopPropagation();
+        e.preventDefault();
+      });
+    } else {
+      $buttonParent.find("div.volume_slider").remove();
+    }
+  }
+
+  /**
+   * @description Trigger React onClick event handler for the given element.
+   * @param {HTMLElement} el
+   */
+  function triggerReactClickHandler(el) {
+    const reactKey = Object.keys(el).find(
+      (k) =>
+        k.startsWith("__reactProps") || k.startsWith("__reactEventHandlers"),
+    );
+    const props = el[reactKey];
+
+    if (props && typeof props.onClick === "function") {
+      const mockEvent = {
+        target: el,
+        currentTarget: el,
+        preventDefault: () => {},
+        stopPropagation: () => {},
+        nativeEvent: new MouseEvent("click"),
+      };
+
+      props.onClick(mockEvent);
+    } else {
+      logger("No React click handler found for the element:", el);
+    }
+  }
+
+  // /**
+  //  * @description Get the element at the pointer position and check if it is the target element or if it is covered by another element.
+  //  * @param {JQuery<HTMLElement>} $target
+  //  * @param {number} clientX
+  //  * @param {number} clientY
+  //  */
+  // export function getPointerElement($target, clientX, clientY) {
+  //     let element = $target.get(0);
+  //     const rect = element.getBoundingClientRect();
+
+  //     const viewportWidth = window.innerWidth;
+  //     const viewportHeight = window.innerHeight;
+
+  //     const visibleX = Math.max(rect.left, 0) + (Math.min(rect.right, viewportWidth) - Math.max(rect.left, 0)) / 2;
+  //     const visibleY = Math.max(rect.top, 0) + (Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0)) / 2;
+
+  //     if (visibleX < 0 || visibleX > viewportWidth || visibleY < 0 || visibleY > viewportHeight) {
+  //         if (clientX == null || clientY == null) {
+  //             return { self: false, topElement: null, target: $target, error: 'out_of_viewport', rect };
+  //         }
+  //     }
+
+  //     const topElement = document.elementFromPoint(clientX || visibleX, clientY || visibleY);
+
+  //     if ($(topElement).height() > document.body.clientHeight) {
+  //         return { self: false, topElement: null, target: $target, error: 'oversize_element', rect };
+  //     }
+
+  //     if ($(topElement).width() < 100 || $(topElement).height() < 100) {
+  //         return { self: false, topElement: null, target: $target, error: 'small_element', rect };
+  //     }
+
+  //     if (topElement && topElement !== element && !element.contains(topElement)) {
+  //         if ($(topElement).find($target).length > 0) {
+  //             // return { self: false, topElement, target: $target };
+  //             return { self: false, topElement: null, target: $target, error: 'covered_by_element', rect };
+  //         }
+
+  //         if ($(topElement).width() != $target.width() || $(topElement).height() != $target.height()) {
+  //             return { self: false, topElement: null, target: $target, error: 'different_dimensions', rect };
+  //         }
+
+  //         // return { self: false, topElement: null, target: $target, error: 'none_of_element', rect };
+  //         return { self: false, topElement, target: $target };
+  //     } else {
+  //         return { self: true, topElement, target: $target };
+  //     }
+  // }
+
+  /**
+   * updatePopupSelectionSummary
+   * @description Update selection summary in popup dialog.
+   *
+   * @param {string|JQuery} root
+   * @return {void}
+   */
+  function updatePopupSelectionSummary(root = ".IG_POPUP_DIG") {
+    const $root = typeof root === "string" ? $(root) : root;
+    if (!$root || $root.length === 0) return;
+
+    const $titleCheckbox = $root.find(".IG_POPUP_DIG_TITLE .checkbox");
+    const $countSpan = $titleCheckbox.find(".item-count");
+    if ($titleCheckbox.length === 0 || $countSpan.length === 0) return;
+
+    const $items = $root.find(".IG_POPUP_DIG_BODY .inner_box");
+    const total = $items.length;
+    const selected = $items.filter(":checked").length;
+
+    $titleCheckbox
+      .find("input")
+      .prop("checked", total > 0 && selected === total);
+
+    const formatCount = (count, singularKey, pluralKey) => {
+      const key = count === 1 ? singularKey : pluralKey;
+      const template = _i18n(key);
+      return typeof template === "string"
+        ? template.replace("%COUNT%", count)
+        : String(count);
+    };
+
+    const totalLabel = formatCount(
+      total,
+      "ITEM_COUNT_SINGULAR",
+      "ITEM_COUNT_PLURAL",
+    );
+    const selectedLabel = formatCount(
+      selected,
+      "SELECTED_COUNT_SINGULAR",
+      "SELECTED_COUNT_PLURAL",
+    );
+
+    $countSpan.text(` (${selectedLabel} / ${totalLabel})`);
+  }
+
+  /**
+   * IG_createDM
+   * @description A dialog showing a list of all media files in the post.
+   *
+   * @param  {Boolean}  hasHidden
+   * @param  {Boolean}  hasCheckbox
+   * @return {void}
+   */
+  function IG_createDM(hasHidden = false, hasCheckbox = false) {
+    const dialogClasses = ["IG_POPUP_DIG"];
+    if (hasHidden) dialogClasses.push("hidden");
+    if (hasCheckbox) dialogClasses.push("IG_POPUP_DIG_MEDIA");
+
+    $("body").append(
+      `<div class="${dialogClasses.join(" ")}"><div class="IG_POPUP_DIG_BG"></div><div class="IG_POPUP_DIG_MAIN"><div class="IG_POPUP_DIG_TITLE"></div><div class="IG_POPUP_DIG_BODY"></div></div></div>`,
+    );
+    $(".IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_TITLE").append(
+      `<div class="insta-controls-dialog-header"><div><div class="insta-controls-dialog-brand">${SCRIPT_NAME} <span>${GM_info.script.version}</span></div><div id="post_info">Post ID: <span id="article-id"></span></div></div><div class="insta-controls-dialog-shortcut"><kbd>${getPlatformModifierKey()}</kbd>+<kbd>Q</kbd> <span data-ih-locale="CLOSE">${_i18n("CLOSE")}</span></div><div class="IG_POPUP_DIG_BTN">${SVG.CLOSE}</div></div>`,
+    );
+
+    if (hasCheckbox) {
+      $(".IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_TITLE").append(
+        '<div id="button_group"></div>',
+      );
+      $(
+        ".IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_TITLE > div#button_group",
+      ).append(
+        `<button id="batch_download_selected" data-ih-locale="BATCH_DOWNLOAD_SELECTED">${_i18n("BATCH_DOWNLOAD_SELECTED")}</button>`,
+      );
+      $(
+        ".IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_TITLE > div#button_group",
+      ).append(
+        `<button id="batch_download_direct" data-ih-locale="BATCH_DOWNLOAD_DIRECT">${_i18n("BATCH_DOWNLOAD_DIRECT")}</button>`,
+      );
+      $(".IG_POPUP_DIG .IG_POPUP_DIG_MAIN .IG_POPUP_DIG_TITLE").append(
+        `<label class="checkbox"><input value="yes" type="checkbox" /><span data-ih-locale="ALL_CHECK">${_i18n("ALL_CHECK")}</span><span class="item-count"></span></label>`,
+      );
+    }
+  }
+
+  /**
+   * IG_setDM
+   * @description Set a dialog status.
+   *
+   * @param  {Boolean}  hasHidden
+   * @return {void}
+   */
+  function IG_setDM(hasHidden) {
+    if ($(".IG_POPUP_DIG").length) {
+      if (hasHidden) {
+        $(".IG_POPUP_DIG").addClass("hidden");
+      } else {
+        $(".IG_POPUP_DIG").removeClass("hidden");
+      }
+    }
+  }
+
+  /**
+   * registerMenuCommand
+   * @description Register script menu command.
+   *
+   * @return {void}
+   */
+  function registerMenuCommand() {
+    for (let id of state.registerMenuIds) {
+      logger("GM_unregisterMenuCommand", id);
+      GM_unregisterMenuCommand(id);
+    }
+
+    state.registerMenuIds.push(
+      GM_registerMenuCommand(
+        _i18n("SETTING"),
+        () => {
+          showSetting();
+        },
+        {
+          accessKey: "w",
+        },
+      ),
+    );
+
+    state.registerMenuIds.push(
+      GM_registerMenuCommand(
+        _i18n("HOTKEY_KEY_SETTINGS_KEY"),
+        () => {
+          showHotkeySetting();
+        },
+        {
+          accessKey: "q",
+        },
+      ),
+    );
+
+    state.registerMenuIds.push(
+      GM_registerMenuCommand(
+        _i18n("DEBUG"),
+        () => {
+          showDebugDOM();
+        },
+        {
+          accessKey: "z",
+        },
+      ),
+    );
+
+    state.registerMenuIds.push(
+      GM_registerMenuCommand(
+        _i18n("FEEDBACK"),
+        () => {
+          showFeedbackDOM();
+        },
+        {
+          accessKey: "f",
+        },
+      ),
+    );
+
+    state.registerMenuIds.push(
+      GM_registerMenuCommand(
+        _i18n("CHECK_FOR_UPDATE"),
+        () => {
+          callNotification();
+        },
+        {
+          accessKey: "c",
+        },
+      ),
+    );
+
+    state.registerMenuIds.push(
+      GM_registerMenuCommand(
+        _i18n("RELOAD_SCRIPT"),
+        () => {
+          reloadScript();
+        },
+        {
+          accessKey: "r",
+        },
+      ),
+    );
+  }
+
+  function showHotkeySetting() {
+    $(".IG_POPUP_DIG").remove();
+    IG_createDM();
+    $(".IG_POPUP_DIG").addClass("IG_POPUP_DIG_HOTKEYS");
+
+    $(".IG_POPUP_DIG #post_info").text("Hotkey Settings");
+
+    const $body = $(".IG_POPUP_DIG .IG_POPUP_DIG_BODY");
+
+    const hotkeyOptions = [
+      { value: "87", label: "Alt+W" },
+      { value: "90", label: "Alt+Z" },
+      { value: "88", label: "Alt+X" },
+      { value: "68", label: "Alt+D" },
+      { value: "75", label: "Alt+K" },
+      { value: "67", label: "Alt+C" },
+      { value: "83", label: "Alt+S" },
+      { value: "192", label: "Alt+~" },
+      { value: "49", label: "Alt+1" },
+      { value: "50", label: "Alt+2" },
+      { value: "51", label: "Alt+3" },
+      { value: "52", label: "Alt+4" },
+      { value: "53", label: "Alt+5" },
+    ];
+
+    const hotkeyConfigs = [
+      {
+        name: "HOTKEY_SETTINGS",
+        key: "HOTKEY_SETTINGS_KEY",
+        stateKey: "settingsHotkeyKeyCode",
+        storageKey: "G_HOTKEY_SETTINGS_KEYCODE",
+        defaultKeyCode: 87,
+      },
+      {
+        name: "HOTKEY_KEY_SETTINGS",
+        key: "HOTKEY_KEY_SETTINGS_KEY",
+        stateKey: "keySettingsHotkeyKeyCode",
+        storageKey: "G_HOTKEY_KEY_SETTINGS_KEYCODE",
+        defaultKeyCode: 67,
+      },
+      {
+        name: "HOTKEY_DEBUG",
+        key: "HOTKEY_DEBUG_KEY",
+        stateKey: "debugHotkeyKeyCode",
+        storageKey: "G_HOTKEY_DEBUG_KEYCODE",
+        defaultKeyCode: 90,
+      },
+      {
+        name: "HOTKEY_DOWNLOAD_STORY",
+        key: "HOTKEY_DOWNLOAD_STORY_KEY",
+        stateKey: "downloadStoryHotkeyKeyCode",
+        storageKey: "G_HOTKEY_DOWNLOAD_STORY_KEYCODE",
+        defaultKeyCode: 83,
+      },
+    ];
+
+    function checkHotkeyConflict(keyCode, excludeStateKey) {
+      for (const config of hotkeyConfigs) {
+        if (
+          config.stateKey !== excludeStateKey &&
+          state[config.stateKey] === keyCode
+        ) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function createHotkeySetting(
+      name,
+      key,
+      stateKey,
+      storageKey,
+      defaultKeyCode,
+    ) {
+      const currentKeyCode = state[stateKey];
+      const $container = $(`
+                <label class="globalSettings hotkey-setting-item" data-hotkey="${name}">
+                    <span>${_i18n(key)}</span>
+                    <div class="hotkey-select-wrapper">
+                        <select class="hotkey-preset" data-storage="${storageKey}" data-state="${stateKey}" data-default="${defaultKeyCode}">
+                            ${hotkeyOptions
+                              .filter(
+                                (o) => o.value != defaultKeyCode.toString(),
+                              )
+                              .map(
+                                (o) =>
+                                  `<option value="${o.value}" ${o.value == currentKeyCode ? "selected" : ""}>${o.label}</option>`,
+                              )
+                              .join("")}
+                            <option value="${defaultKeyCode}" ${currentKeyCode == defaultKeyCode ? "selected" : ""}>Alt+${String.fromCharCode(defaultKeyCode)}</option>
+                        </select>
+                        <button type="button" class="hotkey-reset" title="${_i18n("HOTKEY_RESET")}">${_i18n("HOTKEY_RESET")}</button>
+                    </div>
+                    <div class="hotkey-conflict-warning">▲ ${_i18n("HOTKEY_CONFLICT_WARNING")}</div>
+                </label>
+            `);
+
+      $container.find(".hotkey-reset").on("click", function () {
+        const defaultCode = parseInt(
+          $container.find(".hotkey-preset").data("default"),
+        );
+        const stateKeyName = $container.find(".hotkey-preset").data("state");
+        const storage = $container.find(".hotkey-preset").data("storage");
+        const $preset = $container.find(".hotkey-preset");
+
+        state[stateKeyName] = defaultCode;
+        GM_setValue(storage, defaultCode);
+        $preset.val(defaultCode);
+        $container.find(".hotkey-conflict-warning").hide();
+      });
+
+      $container.find(".hotkey-preset").on("change", function () {
+        const val = $(this).val();
+        const storage = $(this).data("storage");
+        const stateKeyName = $(this).data("state");
+        const defaultCode = parseInt($(this).data("default"));
+        const keyCode = parseInt(val);
+
+        if (checkHotkeyConflict(keyCode, stateKeyName)) {
+          state[stateKeyName] = defaultCode;
+          GM_setValue(storage, defaultCode);
+          $(this).val(defaultCode);
+          $container
+            .find(".hotkey-conflict-warning")
+            .show()
+            .delay(2000)
+            .fadeOut(500);
+        } else {
+          state[stateKeyName] = keyCode;
+          GM_setValue(storage, keyCode);
+          $container.find(".hotkey-conflict-warning").hide();
+        }
+      });
+
+      return $container;
+    }
+
+    $body.append(
+      '<div class="hotkey-settings-container"></div>',
+    );
+
+    hotkeyConfigs.forEach((config) => {
+      $body
+        .find(".hotkey-settings-container")
+        .append(
+          createHotkeySetting(
+            config.name,
+            config.key,
+            config.stateKey,
+            config.storageKey,
+            config.defaultKeyCode,
+          ),
+        );
+    });
+  }
+
+  /**
+   * showSetting
+   * @description Show script settings window.
+   *
+   * @return {void}
+   */
+  function showSetting() {
+    $(".IG_POPUP_DIG").remove();
+    IG_createDM();
+    $(".IG_POPUP_DIG").addClass("IG_POPUP_DIG_SETTINGS");
+
+    $(".IG_POPUP_DIG #post_info").text("Preference Settings");
+    const $body = $(".IG_POPUP_DIG .IG_POPUP_DIG_BODY");
+    $body.append(`
+      <div class="insta-controls-language-row">
+        <div>
+          <div>Language</div>
+          <div class="insta-controls-language-note">Some text is machine-translated; translation contributions are welcome on GitHub.</div>
+        </div>
+        <select id="langSelect"></select>
+      </div>
+    `);
+
+    for (const o in locale_manifest) {
+      $("#langSelect").append(
+        `<option value="${o}" ${state.lang === o ? "selected" : ""}>${locale_manifest[o]}</option>`,
+      );
+    }
+
+    for (const name in USER_SETTING) {
+      $body.append(`
+                <label class="globalSettings"
+                       title="${_i18n(name + "_INTRO")}"
+                       data-ih-locale-title="${name + "_INTRO"}">
+
+                    <span data-ih-locale="${name}">${_i18n(name)}</span>
+                    <input id="${name}" value="box" type="checkbox"
+                           ${USER_SETTING[name] === true ? "checked" : ""}>
+                    <div class="chbtn"><div class="rounds"></div></div>
+                </label>`);
+
+      if (name === "MODIFY_VIDEO_VOLUME") {
+        $body
+          .find(`input[id="${name}"]`)
+          .parent("label")
+          .on("contextmenu", function (e) {
+            e.preventDefault();
+            if (!$(this).find("#tempWrapper").length) {
+              $(this)
+                .append('<div id="tempWrapper"></div>')
+                .children("#tempWrapper")
+                .append(
+                  `<input value="${state.videoVolume}" type="range" min="0" max="1" step="0.05" />`,
+                )
+                .append(
+                  `<input value="${state.videoVolume}" step="0.05" type="number" />`,
+                )
+                .append(`<div class="IG_POPUP_DIG_BTN">${SVG.CLOSE}</div>`);
+            }
+          });
+      }
+
+      if (name === "AUTO_RENAME") {
+        $body
+          .find(`input[id="${name}"]`)
+          .parent("label")
+          .on("contextmenu", function (e) {
+            e.preventDefault();
+            if (!$(this).find("#tempWrapper").length) {
+              $(this)
+                .append('<div id="tempWrapper"></div>')
+                .children("#tempWrapper")
+                .append(
+                  `<input id="date_format" value="${state.fileRenameFormat}" />`,
+                )
+                .append(`<div class="IG_POPUP_DIG_BTN">${SVG.CLOSE}</div>`);
+            }
+          });
+      }
+    }
+
+    $(".IG_POPUP_DIG .IG_POPUP_DIG_BODY input#CHECK_FOR_UPDATE")
+      .closest("label")
+      .prependTo(".IG_POPUP_DIG .IG_POPUP_DIG_BODY");
+
+    arrangeSettingHierarchy();
+  }
+
+  /**
+   * arrangeSettingHierarchy
+   * @description Arrange specific settings under the corresponding setting.
+   *
+   * @return {void}
+   */
+  function arrangeSettingHierarchy() {
+    Object.entries(PARENT_CHILD_MAPPING).forEach(([parent, children]) => {
+      let $prev = $(`.IG_POPUP_DIG .IG_POPUP_DIG_BODY input#${parent}`).closest(
+        "label",
+      );
+
+      children.forEach((child) => {
+        const $childLbl = $(`.IG_POPUP_DIG .IG_POPUP_DIG_BODY input#${child}`)
+          .closest("label")
+          .detach();
+        $childLbl.addClass("child");
+        $prev.after($childLbl);
+        $prev = $childLbl;
+      });
+    });
+  }
+
+  /**
+   * showDebugDOM
+   * @description Show full DOM tree.
+   *
+   * @return {void}
+   */
+  function showDebugDOM() {
+    $(".IG_POPUP_DIG").remove();
+    IG_createDM();
+    $(".IG_POPUP_DIG").addClass("IG_POPUP_DIG_DEBUG");
+    $(".IG_POPUP_DIG #post_info").text("IG Debug DOM Tree");
+
+    $(".IG_POPUP_DIG .IG_POPUP_DIG_BODY").append(
+      "<textarea readonly></textarea>",
+    );
+    $(".IG_POPUP_DIG .IG_POPUP_DIG_BODY").append(
+      '<div class="insta-controls-dialog-actions"></div>',
+    );
+    $(".IG_POPUP_DIG .insta-controls-dialog-actions").append(
+      `<button type="button" class="IG_DISPLAY_DOM_TREE"><a>${_i18n("SHOW_DOM_TREE")}</a></button>`,
+    );
+    $(".IG_POPUP_DIG .insta-controls-dialog-actions").append(
+      `<button type="button" class="IG_SELECT_DOM_TREE"><a>${_i18n("SELECT_AND_COPY")}</a></button>`,
+    );
+    $(".IG_POPUP_DIG .insta-controls-dialog-actions").append(
+      `<button type="button" class="IG_DOWNLOAD_DOM_TREE"><a>${_i18n("DOWNLOAD_DOM_TREE")}</a></button>`,
+    );
+    $(".IG_POPUP_DIG .insta-controls-dialog-actions").append(
+      `<button type="button" class="IG_REPORT_GITHUB"><a href="${ISSUES_URL}" target="_blank">${_i18n("REPORT_GITHUB")}</a></button>`,
+    );
+  }
+
+  /**
+   * showFeedbackDOM
+   * @description Show feedback options.
+   *
+   * @return {void}
+   */
+  function showFeedbackDOM() {
+    $(".IG_POPUP_DIG").remove();
+    IG_createDM();
+    $(".IG_POPUP_DIG").addClass("IG_POPUP_DIG_FEEDBACK");
+    $(".IG_POPUP_DIG #post_info").text("Feedback Options");
+
+    $(".IG_POPUP_DIG .IG_POPUP_DIG_BODY").append(
+      '<div class="insta-controls-dialog-actions"></div>',
+    );
+    $(".IG_POPUP_DIG .insta-controls-dialog-actions").append(
+      `<button type="button" class="IG_REPORT_GITHUB"><a href="${ISSUES_URL}" target="_blank">${_i18n("REPORT_GITHUB")}</a></button>`,
+    );
+  }
+
+  var detectMovingViewerTimer = null;
+
+  function openImageViewer(imageUrl) {
+    removeImageViewer();
+
+    $("body").append(
+      `<div id="imageViewer">
+        <div id="iv_header">
+            <div class="iv_title">Image Viewer</div>
+            <div class="iv_actions">
+                <div id="rotate_left">${SVG.TURN_DEG}</div>
+                <div id="rotate_right">${SVG.TURN_DEG}</div>
+            </div>
+            <div id="iv_close">${SVG.CLOSE}</div>
+        </div>
+        <section>
+            <div id="iv_transform">
+                <div id="iv_rotate">
+                    <img id="iv_image" src="" />
+                </div>
+            </div>
+        </section>
+    </div>`,
+    );
+
+    const $container = $("#imageViewer");
+    const $section = $("#imageViewer > section");
+    const $wrapT = $("#iv_transform");
+    const $wrapR = $("#iv_rotate");
+    const $header = $("#iv_header");
+    const $closeIcon = $("#iv_close");
+    const $image = $("#iv_image");
+    const $rotateLeft = $("#rotate_left");
+    const $rotateRight = $("#rotate_right");
+
+    $image.attr("src", imageUrl);
+    $container.css("display", "flex");
+    $wrapT.css("transform-origin", "0 0");
+    $wrapT.css("transition", `transform 0.15s ease`);
+    $wrapR.css("transform-origin", "center");
+    $wrapR.css("transition", `transform 0.15s ease`);
+    $wrapT.css("will-change", "transform");
+    $wrapR.css("will-change", "transform");
+
+    let rotate = 0;
+    let scale = 1;
+    let posX = 0,
+      posY = 0;
+    let isDragging = false;
+    let isMovingPhoto = false;
+    let startX, startY;
+    var previousPosition = {
+      x: 0,
+      y: 0,
+    };
+
+    detectMovingViewerTimer = setInterval(() => {
+      const currentPosition = {
+        x: posX,
+        y: posY,
+      };
+      if (
+        currentPosition.x !== previousPosition.x ||
+        currentPosition.y !== previousPosition.y
+      ) {
+        isMovingPhoto = true;
+      } else {
+        isMovingPhoto = false;
+      }
+      previousPosition = currentPosition;
+    }, 100);
+
+    $image.on("load", () => {
+      posX = 0;
+      posY = 0;
+      updateImageStyle();
+    });
+
+    $image.on("dragstart drop", (e) => {
+      e.preventDefault();
+    });
+
+    $image.on("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (!isMovingPhoto) {
+        if (scale <= 1) {
+          makeZoomAction(e, Math.min(Math.max(1, scale + 1.25), 5));
+        } else {
+          scale = 1;
+          posX = 0;
+          posY = 0;
+        }
+
+        updateImageStyle();
+      }
+    });
+
+    $section.on("wheel", (e) => {
+      e.preventDefault();
+      makeZoomAction(e);
+    });
+
+    $container.on("wheel", (e) => {
+      e.preventDefault();
+    });
+
+    $image.on("mousedown", (e) => {
+      if (scale == 1) return;
+
+      isDragging = true;
+
+      startX = e.pageX - posX;
+      startY = e.pageY - posY;
+      $image.css("cursor", "grabbing");
+    });
+
+    $image.on("mouseup", () => {
+      if (scale == 1) return;
+
+      isDragging = false;
+      $image.css("cursor", "grab");
+    });
+
+    $rotateLeft.on("click", function () {
+      rotate -= 90;
+      updateImageStyle();
+    });
+
+    $rotateRight.on("click", function () {
+      rotate += 90;
+      updateImageStyle();
+    });
+
+    $(document).on("mousemove.igHelper", (e) => {
+      if (!isDragging) return;
+      e.preventDefault();
+
+      posX = e.pageX - startX;
+      posY = e.pageY - startY;
+
+      updateImageStyle();
+    });
+
+    $container.on("click", () => {
+      removeImageViewer();
+    });
+
+    $closeIcon.on("click", () => {
+      removeImageViewer();
+    });
+
+    $header.on("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    function updateImageStyle() {
+      $wrapT.css("transition", isMovingPhoto ? "none" : `transform 0.15s ease`);
+      $wrapT.css(
+        "transform",
+        `translate(${posX}px, ${posY}px) scale(${scale})`,
+      );
+      $wrapR.css("transform", `rotate(${rotate}deg)`);
+
+      if (scale == 1) {
+        $image.css("cursor", "zoom-in");
+      } else {
+        $image.css("cursor", "grabbing");
+      }
+    }
+
+    function makeZoomAction(e, newScale) {
+      e.preventDefault();
+
+      let prevScale = scale;
+
+      // newScale should be null when passing by wheel event
+      if (newScale == null) {
+        let factor = 0.1;
+        let delta = e.originalEvent.deltaY < 0 ? 1 : -1;
+        scale = Math.min(5, Math.max(1, scale + delta * factor * scale));
+      } else {
+        scale = newScale;
+      }
+
+      let rect = $section[0].getBoundingClientRect();
+      let mx = e.clientX - rect.left;
+      let my = e.clientY - rect.top;
+
+      let zoomTargetX = (mx - posX) / prevScale;
+      let zoomTargetY = (my - posY) / prevScale;
+
+      posX = -zoomTargetX * scale + mx;
+      posY = -zoomTargetY * scale + my;
+
+      updateImageStyle();
+    }
+  }
+
+  function removeImageViewer() {
+    clearInterval(detectMovingViewerTimer);
+    $("#imageViewer").remove();
+    $(document).off("mousemove.igHelper");
+  }
+
+  let mediaCacheDirty = false;
+  let mediaCacheSaveTimer = null;
+
+  /**
+   * purgeCache
+   * @description Purge image cache entries older than 12 hours.
+   *
+   * @return {void}
+   */
+  function purgeCache() {
+    const now = Date.now();
+    for (const id in state.GL_imageCache) {
+      if (now - state.GL_imageCache[id].ts > IMAGE_CACHE_MAX_AGE)
+        delete state.GL_imageCache[id];
+    }
+    GM_setValue(IMAGE_CACHE_KEY, state.GL_imageCache);
+  }
+
+  /**
+   * mediaIdFromURL
+   * @description Decode mediaId from ig_cache_key parameter that Instagram includes in the URL.
+   *
+   * @param  {string}  url
+   * @return {?string}
+   */
+  function mediaIdFromURL(url) {
+    try {
+      const u = new URL(url);
+      const key = u.searchParams.get("ig_cache_key");
+      if (!key) return null;
+      const b64 = key.split(".")[0]; // Part before “.3-ccb7…”
+      return atob(b64); // e.g., “3670776772828545770”
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * putInCache
+   * @description Save URL to image cache.
+   *
+   * @param  {string}  mediaId
+   * @param  {string}  url
+   * @return {void}
+   */
+  function putInCache(mediaId, url) {
+    if (!mediaId) return;
+
+    const keys = Object.keys(state.GL_imageCache);
+    if (keys.length >= IMAGE_MAX_CACHE_ITEMS) {
+      keys.sort(
+        (a, b) => state.GL_imageCache[a].ts - state.GL_imageCache[b].ts,
+      );
+      delete state.GL_imageCache[keys[0]];
+    }
+
+    mediaCacheDirty = true;
+    state.GL_imageCache[mediaId] = { url, ts: Date.now() };
+
+    if (!mediaCacheSaveTimer) {
+      mediaCacheSaveTimer = setTimeout(() => {
+        if (mediaCacheDirty) {
+          GM_setValue(IMAGE_CACHE_KEY, state.GL_imageCache);
+          mediaCacheDirty = false;
+        }
+        mediaCacheSaveTimer = null;
+      }, 500); // write in script storage per 500 ms
+    }
+  }
+
+  /**
+   * getImageFromCache
+   * @description Read image URL from cache; returns null if not found or expired.
+   *
+   * @param  {string}  mediaId
+   * @return {?string}
+   */
+  function getImageFromCache(mediaId) {
+    if (!mediaId) return null;
+    const entry = state.GL_imageCache[mediaId];
+    if (!entry) return null;
+    if (Date.now() - entry.ts > IMAGE_CACHE_MAX_AGE) {
+      delete state.GL_imageCache[mediaId];
+      return null;
+    }
+    return entry.url;
+  }
+
+  /**
+   * registerPerformanceObserver
+   * @description Register performance observer to document, captures any loaded image resource.
+   *
+   * @return {void}
+   */
+  function registerPerformanceObserver() {
+    if (typeof PerformanceObserver === "undefined") {
+      return;
+    }
+    if (
+      Array.isArray(PerformanceObserver.supportedEntryTypes) &&
+      !PerformanceObserver.supportedEntryTypes.includes("resource")
+    ) {
+      return;
+    }
+
+    const perfObs = new PerformanceObserver((list) => {
+      if (!USER_SETTING.CAPTURE_IMAGE_VIA_MEDIA_CACHE) return;
+
+      list.getEntries().forEach((entry) => {
+        if (entry.initiatorType === "img") {
+          const u = entry.name;
+
+          if (
+            !(
+              u.includes("_e35") ||
+              u.includes("_e15") ||
+              u.includes(".webp?")
+            ) ||
+            u.includes("_e35_s") ||
+            u.match(/_[sp](\d+)x\1(?!\d)/)
+          ) {
+            return;
+          }
+
+          const id = mediaIdFromURL(u);
+          if (id && !state.GL_imageCache[id]) putInCache(id, u);
+        }
+      });
+    });
+    try {
+      perfObs.observe({ entryTypes: ["resource"] });
+    } catch (err) {
+      logger("registerPerformanceObserver()", "disabled", err?.message || err);
+    }
+  }
+
+  /**
+   * translateText
+   * @description i18n translation text.
+   *
+   * @return {void}
+   */
+  function translateText() {
+    if (translationTextCache != null) {
+      return translationTextCache;
+    }
+
+    var eLocale = {
+      "en-US": {
+        NOTICE_UPDATE_TITLE: "New version released.",
+        NOTICE_UPDATE_CONTENT:
+          "insta-controls has released a new version, click here to update.",
+        CHECK_FOR_UPDATE: "Check for Script Updates",
+        RELOAD_SCRIPT: "Reload Script",
+        FEEDBACK: "Feedback",
+        IMAGE_VIEWER: "Open Image In Viewer",
+        NEW_TAB: "Open in New Tab",
+        SHOW_DOM_TREE: "Show DOM Tree",
+        SELECT_AND_COPY: "Select All and Copy from the Input Box",
+        DOWNLOAD_DOM_TREE: "Download DOM Tree as a Text File",
+        REPORT_GITHUB: "Report an Issue on GitHub",
+        DEBUG: "Debug Window",
+        CLOSE: "Close",
+        ALL_CHECK: "Select All",
+        ITEM_COUNT_SINGULAR: "%COUNT% item",
+        ITEM_COUNT_PLURAL: "%COUNT% items",
+        ITEM_POSITION: "Item %CURRENT% of %TOTAL%",
+        SELECTED_COUNT_SINGULAR: "%COUNT% selected",
+        SELECTED_COUNT_PLURAL: "%COUNT% selected",
+        BATCH_DOWNLOAD_SELECTED: "Download Selected Resources",
+        BATCH_DOWNLOAD_DIRECT: "Download All Resources",
+        IMG: "Image",
+        VID: "Video",
+        DW: "Download",
+        DW_ALL: "Download All Resources",
+        COPY_MEDIA: "Copy Media",
+        COPY_MEDIA_WORKING: "Copying media...",
+        COPY_MEDIA_SUCCESS: "Media copied to the clipboard.",
+        COPY_MEDIA_VIDEO_URL_SUCCESS:
+          "This browser cannot copy video files, so the direct video URL was copied instead.",
+        COPY_MEDIA_ERROR: "Could not copy this media to the clipboard.",
+        COPY_MEDIA_UNSUPPORTED:
+          "This browser does not support copying media to the clipboard.",
+        VIDEO_THUMBNAIL: "Download Video Thumbnail",
+        LOAD_BLOB_ONE: "Loading Blob Media...",
+        LOAD_BLOB_MULTIPLE: "Loading Blob Media and Others...",
+        LOAD_BLOB_RELOAD: "Detecting Blob Media, reloading...",
+        NO_CHECK_RESOURCE: "You need to select a resource to download.",
+        NO_VID_URL: "Cannot find video URL.",
+        SETTING: "Settings",
+        AUTO_RENAME: "Automatically Rename Files (Right-Click to Set)",
+        RENAME_PUBLISH_DATE:
+          "Set Renamed File Timestamp to Resource Publish Date",
+        RENAME_LOCATE_DATE:
+          "Modify Renamed File Timestamp Date Format (Right-Click to Set)",
+        DISABLE_VIDEO_LOOPING: "Disable Video Auto-looping",
+        HTML5_VIDEO_CONTROL: "Display HTML5 Video Controller",
+        MAX_REEL_PLAYBACK_QUALITY: "Play Reels at Maximum Quality",
+        REDIRECT_CLICK_USER_STORY_PICTURE:
+          "Redirect When Clicking on User's Story Picture",
+        FORCE_FETCH_ALL_RESOURCES: "Force Fetch All Resources in the Post",
+        DIRECT_DOWNLOAD_VISIBLE_RESOURCE:
+          "Directly Download the Visible Resources in the Post",
+        DIRECT_DOWNLOAD_ALL: "Directly Download All Resources in the Post",
+        DIRECT_DOWNLOAD_STORY:
+          "Directly Download All Resources in the Story/Highlight",
+        MODIFY_VIDEO_VOLUME: "Modify Video Volume (Right-Click to Set)",
+        MODIFY_RESOURCE_EXIF: "Modify Resource EXIF Properties",
+        SCROLL_BUTTON: "Enable Scroll Buttons for Reels Page",
+        FORCE_RESOURCE_VIA_MEDIA: "Force Fetch Resource via Media API",
+        PREFER_DASH_MANIFEST:
+          "Prefer DASH Manifest (Higher-Quality Video via Media API)",
+        FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED:
+          "Use Alternative Methods to Download When the Media API is Not Accessible",
+        NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST:
+          "Always Use Media API for [Open in New Tab] in Posts",
+        SKIP_VIEW_STORY_CONFIRM:
+          "Skip the Confirmation Page for Viewing a Story/Highlight",
+        SKIP_SHARED_WITH_YOU_DIALOG:
+          'Skip "shared this with you" dialog on shared profile links',
+        CAPTURE_IMAGE_VIA_MEDIA_CACHE:
+          "Capture Image Resource Using Media Cache",
+        AUTO_RENAME_INTRO: [
+          "Auto rename file to custom format:",
+          "Custom Format List:",
+          "%USERNAME% - Username",
+          "%SOURCE_TYPE% - Download Source",
+          "%SHORTCODE% - Post Shortcode",
+          "%YEAR% - Year when downloaded/published",
+          "%2-YEAR% - Year (last two digits) when downloaded/published",
+          "%MONTH% - Month when downloaded/published",
+          "%DAY% - Day when downloaded/published",
+          "%HOUR% - Hour when downloaded/published",
+          "%MINUTE% - Minute when downloaded/published",
+          "%SECOND% - Second when downloaded/published",
+          "%ORIGINAL_NAME% - Original name of downloaded file",
+          "%ORIGINAL_NAME_FIRST% - Original name of downloaded file (first part of name)",
+          "%INDEX% - Resource index",
+          "%UID% - User account unique ID",
+          "",
+          "If set to false, the file name will remain unchanged.",
+          "Example: instagram_321565527_679025940443063_4318007696887450953_n.jpg",
+        ],
+        RENAME_PUBLISH_DATE_INTRO:
+          "Sets the timestamp in the file rename format to the resource publish date (browser time zone).\n\nThis feature only works when [Automatically Rename Files] is set to TRUE.",
+        RENAME_LOCATE_DATE_INTRO:
+          "Modify the renamed file timestamp date format to the browser's local time, and format it to your preferred regional date format.\n\nThis feature only works when [Automatically Rename Files] is set to TRUE.",
+        DISABLE_VIDEO_LOOPING_INTRO:
+          "Disable video auto-looping in Reels and posts.",
+        HTML5_VIDEO_CONTROL_INTRO:
+          "Display the native HTML5 video controls for Instagram videos.\n\nThe controls stay attached when Instagram replaces or reuses its player. Right-click the current video to switch between the native controls and Instagram's original overlay.",
+        MAX_REEL_PLAYBACK_QUALITY_INTRO:
+          "Hold the active Reel's poster for up to five seconds while loading the highest-resolution complete progressive MP4 reported by Instagram. This uses more bandwidth and a private metadata request. Native playback resumes if the request is throttled, fails, times out, or Safari rejects the source. DASH downloads are separate and may provide a higher-resolution saved file.",
+        REDIRECT_CLICK_USER_STORY_PICTURE_INTRO:
+          "Redirect to a user's profile page when right-clicking on their avatar in the story area on the homepage.\nIf you use the middle mouse button to click, it will open in a new tab.",
+        FORCE_FETCH_ALL_RESOURCES_INTRO:
+          "Force fetching of all resources (photos and videos) in a post via the Instagram API to remove the limit of three resources per post.",
+        DIRECT_DOWNLOAD_VISIBLE_RESOURCE_INTRO:
+          "Directly download the current resources available in the post.",
+        DIRECT_DOWNLOAD_ALL_INTRO:
+          "When you click the download button, all resources in the post will be forcibly fetched and downloaded.",
+        MODIFY_VIDEO_VOLUME_INTRO:
+          "Modify the video playback volume in Reels and posts (right-click to open the volume setting slider).",
+        SCROLL_BUTTON_INTRO:
+          "Enable scroll buttons for the lower right corner of the Reels page.",
+        FORCE_RESOURCE_VIA_MEDIA_INTRO:
+          "The Media API will try to get the highest quality photo or video possible, but it may take longer to load.",
+        PREFER_DASH_MANIFEST_INTRO:
+          "Prefer the DASH manifest for video resources via the Media API. If a DASH manifest is available, it will download the video and audio streams SEPARATELY for the best possible quality.",
+        FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED_INTRO:
+          "When the Media API reaches its rate limit or cannot be used for other reasons, the Forced Fetch API will be used to download resources (the resource quality may be slightly lower).",
+        NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST_INTRO:
+          "The [Open in New Tab] button in posts will always use the Media API to obtain high-resolution resources.",
+        CHECK_FOR_UPDATE_INTRO:
+          "Check for updates when the script is triggered (check every 300 seconds).\nUpdate notifications will be sent as desktop notifications through the browser.",
+        SKIP_VIEW_STORY_CONFIRM_INTRO:
+          "Automatically skip when confirmation page is shown in story or highlight.",
+        SKIP_SHARED_WITH_YOU_DIALOG_INTRO:
+          'Automatically click "Not now" on the "X shared this with you" dialog when opening any ?igsh= links.',
+        MODIFY_RESOURCE_EXIF_INTRO:
+          "Modify the EXIF attribute of the image resource to include metadata such as post link, shooting date, and author.",
+        DIRECT_DOWNLOAD_STORY_INTRO:
+          "When you click [Download All Resources], all stories/highlights are downloaded directly, without showing the image selection dialog.",
+        CAPTURE_IMAGE_VIA_MEDIA_CACHE_INTRO:
+          "Use a watcher to capture any high-quality image URLs in the DOM tree into the script's storage so that they can be extracted when available and upon user input.",
+        HOTKEY_DEBUG_KEY: "Debug Window",
+        HOTKEY_SETTINGS_KEY: "Preference Settings",
+        HOTKEY_KEY_SETTINGS_KEY: "Hotkey Settings",
+        HOTKEY_DOWNLOAD_STORY_KEY: "Download Story",
+        HOTKEY_CONFLICT_WARNING:
+          "This hotkey may conflict with other settings.",
+        HOTKEY_RESET: "Reset",
+      },
+      "pt-BR": {
+        COPY_MEDIA: "Copiar mídia",
+        COPY_MEDIA_WORKING: "Copiando mídia...",
+        COPY_MEDIA_SUCCESS: "Mídia copiada para a área de transferência.",
+        COPY_MEDIA_VIDEO_URL_SUCCESS:
+          "O navegador não permite copiar o arquivo de vídeo; o link direto foi copiado.",
+        COPY_MEDIA_ERROR:
+          "Não foi possível copiar esta mídia para a área de transferência.",
+        COPY_MEDIA_UNSUPPORTED:
+          "Este navegador não oferece suporte à cópia de mídia para a área de transferência.",
+      },
+    };
+
+    var resultUnsorted = Object.assign({}, eLocale);
+    Object.entries(state.locale).forEach(([lang, translations]) => {
+      resultUnsorted[lang] = Object.assign(
+        {},
+        resultUnsorted[lang] || {},
+        translations,
+      );
+    });
+    var resultSorted = Object.keys(resultUnsorted)
+      .sort()
+      .reduce((obj, key) => {
+        obj[key] = resultUnsorted[key];
+        return obj;
+      }, {});
+
+    var result = Object.assign({}, resultSorted);
+    for (const lang in result) {
+      const translations = result[lang];
+      if (!translations || typeof translations !== "object") {
+        continue;
+      }
+
+      Object.keys(translations).forEach((key) => {
+        const value = translations[key];
+        if (Array.isArray(value)) {
+          translations[key] = value.join("\n");
+        }
+      });
+    }
+
+    translationTextCache = result;
+    return translationTextCache;
+  }
+
+  /**
+   * getTranslationText
+   * @description i18n translation text.
+   *
+   * @param  {String}  lang
+   * @return {Object}
+   */
+  async function getTranslationText(lang) {
+    return new Promise((resolve, reject) => {
+      GM_xmlhttpRequest({
+        method: "GET",
+        url: `https://cdn.jsdelivr.net/gh/SN-Koarashi/ig-helper@master/locale/translations/${lang}.json?v${GM_info.script.version}`,
+        onload: function (response) {
+          try {
+            let obj = JSON.parse(response.response);
+            resolve(obj);
+          } catch (err) {
+            reject(err);
+          }
+        },
+        onerror: function (err) {
+          logger("getTranslationText()", "reject", err);
+          reject(err);
+        },
+      });
+    });
+  }
+
+  /**
+   * _i18n
+   * @description Perform i18n translation.
+   *
+   * @param  {String}  text
+   * @return {void}
+   */
+  function _i18n(text) {
+    const translate = translateText();
+
+    if (
+      translate[state.lang] != undefined &&
+      translate[state.lang][text] != undefined
+    ) {
+      return translate[state.lang][text];
+    } else {
+      return translate["en-US"][text];
+    }
+  }
+
+  /**
+   * repaintingTranslations
+   * @description Perform i18n translation.
+   *
+   * @return {void}
+   */
+  function repaintingTranslations() {
+    $("[data-ih-locale]").each(function () {
+      $(this).text(_i18n($(this).attr("data-ih-locale")));
+    });
+    $("[data-ih-locale-title]").each(function () {
+      $(this).attr("title", _i18n($(this).attr("data-ih-locale-title")));
+    });
+  }
+
+  /* register all events */
+
+  // Running if document is ready
+  $(function () {
+    function ConvertDOM(domEl) {
+      var obj = [];
+      for (var ele of domEl) {
+        obj.push({
+          tagName: ele.tagName,
+          id: ele.id,
+          className: ele.className,
+        });
+      }
+
+      return obj;
+    }
+
+    function setDOMTreeContent() {
+      let text = $('div[id^="mount"]')[0];
+      var logger = "";
+      state.GL_logger.forEach((log) => {
+        var jsonData = JSON.stringify(
+          log.content,
+          function (key, value) {
+            if (Array.isArray(this)) {
+              if (typeof value === "object" && value instanceof jQuery) {
+                return ConvertDOM(value);
+              }
+              return value;
+            } else {
+              return value;
+            }
+          },
+          "\t",
+        );
+        logger += `${new Date(log.time).toISOString()}: ${jsonData}\n`;
+      });
+      $(".IG_POPUP_DIG .IG_POPUP_DIG_BODY textarea").text(
+        "Logger:\n" +
+          logger +
+          "\n-----\n\nLocation: " +
+          location.pathname +
+          "\nDOM Tree with div#mount:\n" +
+          text.innerHTML,
+      );
+    }
+
+    $("body").on(
+      "click",
+      ".IG_POPUP_DIG .IG_POPUP_DIG_BODY .IG_DISPLAY_DOM_TREE",
+      function () {
+        setDOMTreeContent();
+      },
+    );
+
+    $("body").on(
+      "click",
+      ".IG_POPUP_DIG .IG_POPUP_DIG_BODY .IG_SELECT_DOM_TREE",
+      function () {
+        $(".IG_POPUP_DIG .IG_POPUP_DIG_BODY textarea").select();
+        document.execCommand("copy");
+      },
+    );
+
+    $("body").on(
+      "click",
+      ".IG_POPUP_DIG .IG_POPUP_DIG_BODY .IG_DOWNLOAD_DOM_TREE",
+      function () {
+        if (
+          $(".IG_POPUP_DIG .IG_POPUP_DIG_BODY textarea").text().length === 0
+        ) {
+          setDOMTreeContent();
+        }
+
+        var text = $(".IG_POPUP_DIG .IG_POPUP_DIG_BODY textarea").text();
+        var a = document.createElement("a");
+        var file = new Blob([text], { type: "text/plain" });
+        a.href = URL.createObjectURL(file);
+        a.download = "DOMTree-" + new Date().getTime() + ".txt";
+
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      },
+    );
+
+    // Close the download dialog if user click the close icon
+    $("body").on("click", ".IG_POPUP_DIG_BTN, .IG_POPUP_DIG_BG", function () {
+      if ($(this).parent("#tempWrapper").length > 0) {
+        $(this)
+          .parent("#tempWrapper")
+          .fadeOut(250, function () {
+            $(this).remove();
+          });
+      } else {
+        $(".IG_POPUP_DIG").remove();
+      }
+    });
+
+    $(window).on("keydown", function (e) {
+      // Hot key [Alt+Q] to close the download dialog - fixed
+      if (e.altKey && e.which == 81) {
+        $(".IG_POPUP_DIG").remove();
+        e.preventDefault();
+      }
+      // Hot key [Alt+W] to open/close the settings dialog - use custom keycode if enabled, fallback to default Alt+W(87)
+      let settingsKeyCode = state.settingsHotkeyKeyCode || 87;
+      if (e.altKey && e.which == settingsKeyCode) {
+        if (
+          $(".IG_POPUP_DIG").length > 0 &&
+          $(".IG_POPUP_DIG #post_info").text() === "Preference Settings"
+        ) {
+          $(".IG_POPUP_DIG").remove();
+        } else {
+          showSetting();
+        }
+        e.preventDefault();
+      }
+
+      // Hot key [Alt+W] to open/close the key settings dialog - use custom keycode if enabled, fallback to default Alt+C(67)
+      let keySettingsHotkeyKeyCode = state.keySettingsHotkeyKeyCode || 67;
+      if (e.altKey && e.which == keySettingsHotkeyKeyCode) {
+        if (
+          $(".IG_POPUP_DIG").length > 0 &&
+          $(".IG_POPUP_DIG #post_info").text() === "Hotkey Settings"
+        ) {
+          $(".IG_POPUP_DIG").remove();
+        } else {
+          showHotkeySetting();
+        }
+        e.preventDefault();
+      }
+
+      // Hot key [Alt+Z] to open the debug DOM - use custom keycode if enabled, fallback to default Alt+Z(90)
+      let debugKeyCode = state.debugHotkeyKeyCode || 90;
+      if (e.altKey && e.which == debugKeyCode) {
+        showDebugDOM();
+        e.preventDefault();
+      }
+
+      // Hot key [Alt+R] to reload script (fixed, not customizable)
+      if (e.which == "82" && e.altKey) {
+        reloadScript();
+        e.preventDefault();
+      }
+
+      // Hot key [Alt+S] to download story/highlights resource - use custom keycode if enabled, fallback to default Alt+S(83)
+      let downloadStoryKeyCode = state.downloadStoryHotkeyKeyCode || 83;
+      if (e.altKey && e.which == downloadStoryKeyCode) {
+        if (
+          location.href.match(
+            /^(https:\/\/www\.instagram\.com\/stories\/)/gi,
+          ) &&
+          $(".IG_DWSTORY").length > 0
+        ) {
+          $(".IG_DWSTORY")?.trigger("click");
+        }
+        if (
+          location.href.match(
+            /^(https:\/\/www\.instagram\.com\/stories\/highlights\/)/gi,
+          ) &&
+          $(".IG_DWHISTORY").length > 0
+        ) {
+          $(".IG_DWHISTORY")?.trigger("click");
+        }
+        e.preventDefault();
+      }
+    });
+
+    $("body").on("change", ".IG_POPUP_DIG input", function () {
+      var name = $(this).attr("id");
+
+      if (name && USER_SETTING[name] !== undefined) {
+        let isChecked = $(this).prop("checked");
+        GM_setValue(name, isChecked);
+        USER_SETTING[name] = isChecked;
+
+        if (name === "MAX_REEL_PLAYBACK_QUALITY") {
+          if (isChecked) {
+            scanForPlayingReels();
+          } else {
+            cancelMaximumReelPlayback("setting-disabled", true);
+          }
+        }
+
+        if (name === "HTML5_VIDEO_CONTROL") {
+          setHTML5VideoControlsEnabled(isChecked);
+        }
+
+        logger("user settings", name, isChecked);
+      }
+    });
+
+    $("body").on("click", ".IG_POPUP_DIG .globalSettings", function (e) {
+      if ($(this).find("#tempWrapper").length > 0) {
+        e.preventDefault();
+      }
+    });
+
+    $("body").on(
+      "change",
+      ".IG_POPUP_DIG #tempWrapper input:not(#date_format)",
+      function () {
+        let value = $(this).val();
+
+        if ($(this).attr("type") == "range") {
+          $(this).next().val(value);
+        } else {
+          $(this).prev().val(value);
+        }
+
+        if (value >= 0 && value <= 1) {
+          state.videoVolume = value;
+          GM_setValue("G_VIDEO_VOLUME", value);
+        }
+      },
+    );
+
+    $("body").on(
+      "input",
+      ".IG_POPUP_DIG #tempWrapper input:not(#date_format)",
+      function () {
+        if ($(this).attr("type") == "range") {
+          let value = $(this).val();
+          $(this).next().val(value);
+        } else {
+          let value = $(this).val();
+          if (value >= 0 && value <= 1) {
+            $(this).prev().val(value);
+          } else {
+            if (value < 0) {
+              $(this).val(0);
+            } else {
+              $(this).val(1);
+            }
+          }
+        }
+      },
+    );
+
+    $("body").on(
+      "input",
+      ".IG_POPUP_DIG #tempWrapper input#date_format",
+      function () {
+        GM_setValue("G_RENAME_FORMAT", $(this).val());
+        state.fileRenameFormat = $(this).val();
+      },
+    );
+
+    $("body").on("click", 'a[data-needed="direct"]', async function (e) {
+      if (clickStartedOnInjectedAction(e)) {
+        return;
+      }
+
+      const directAnchor = e.target?.closest?.('a[data-needed="direct"]');
+      if (directAnchor !== this) {
+        return;
+      }
+
+      e.preventDefault();
+      await triggerLinkElement(this);
+    });
+
+    $("body").on("click", ".IG_POPUP_DIG_BODY .newTab", async function (e) {
+      consumeInjectedClick(e);
+      const $linkElement = $(this).parent().children("a").first();
+
+      if (
+        USER_SETTING.FORCE_RESOURCE_VIA_MEDIA &&
+        USER_SETTING.NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST
+      ) {
+        if ($linkElement.length === 0) {
+          console.error("Cannot find popup new-tab link element.");
+          alert("Cannot find open tab URL.");
+          return;
+        }
+        await triggerLinkElement($linkElement[0], true);
+      } else {
+        const href = $linkElement.attr("data-href");
+        if (!href) {
+          console.error("Cannot find popup new-tab data-href.", {
+            linkElement: $linkElement.get(0),
+          });
+          alert("Cannot find open tab URL.");
+          return;
+        }
+        openNewTab(replaceSameOriginHost(href));
+      }
+    });
+
+    $("body").on("click", ".IG_POPUP_DIG_BODY .videoThumbnail", async function (e) {
+      consumeInjectedClick(e);
+      let timestamp = new Date().getTime();
+
+      if (
+        USER_SETTING.RENAME_PUBLISH_DATE &&
+        $(this).parent().children("a").attr("datetime")
+      ) {
+        timestamp = $(this).parent().children("a").attr("datetime");
+      }
+
+      let postPath =
+        $(this).parent().children("a").attr("data-path") ??
+        $("#article-id").text();
+
+      if (USER_SETTING.CAPTURE_IMAGE_VIA_MEDIA_CACHE) {
+        const mediaId = $(this).parent().children("a").first().attr("media-id");
+        const cached = getImageFromCache(mediaId);
+        if (cached) {
+          logger("[Restore Cached postThumbnail]", mediaId);
+          return await saveFiles(cached, {
+            username: $(this).parent().children("a").attr("data-username"),
+            sourceType: "thumbnail",
+            timestamp,
+            filetype: "jpg",
+            shortcode: postPath,
+          });
+        }
+      }
+
+      return await saveFiles(
+        $(this).parent().children("a").find("img").first().attr("src"),
+        {
+          username: $(this).parent().children("a").attr("data-username"),
+          sourceType: "thumbnail",
+          timestamp,
+          filetype: "jpg",
+          shortcode: postPath,
+        },
+      );
+    });
+
+    // Running if user left-click download icon in stories
+    $("body").on("click", ".IG_DWSTORY", function () {
+      onStory(true);
+    });
+
+    // Running if user left-click all download icon in stories
+    $("body").on("click", ".IG_DWSTORY_ALL", function () {
+      onStoryAll();
+    });
+
+    // Running if user left-click 'open in new tab' icon in stories
+    $("body").on("click", ".IG_DWNEWTAB", function (e) {
+      e.preventDefault();
+      onStory(true, true, true);
+    });
+
+    // Running if user left-click download thumbnail icon in stories
+    $("body").on("click", ".IG_DWSTORY_THUMBNAIL", function () {
+      onStoryThumbnail(true);
+    });
+
+    // Running if user left-click download icon in profile
+    $("body").on("click", ".IG_DWPROFILE", function (e) {
+      e.stopPropagation();
+      onProfileAvatar(true);
+    });
+
+    // Running if user left-click download icon in highlight stories
+    $("body").on("click", ".IG_DWHISTORY", function () {
+      onHighlightsStory(true);
+    });
+
+    // Running if user left-click all download icon in highlight stories
+    $("body").on("click", ".IG_DWHISTORY_ALL", function () {
+      onHighlightsStoryAll();
+    });
+
+    // Running if user left-click 'open in new tab' icon in highlight stories
+    $("body").on("click", ".IG_DWHINEWTAB", function (e) {
+      e.preventDefault();
+      onHighlightsStory(true, true);
+    });
+
+    // Running if user left-click thumbnail download icon in highlight stories
+    $("body").on("click", ".IG_DWHISTORY_THUMBNAIL", function () {
+      onHighlightsStoryThumbnail(true);
+    });
+
+    // Running if user left-click download icon in reels
+    $("body").on("click", ".IG_REELS", function () {
+      onReels(true, true);
+    });
+
+    // Running if user left-click newtab icon in reels
+    $("body").on("click", ".IG_REELS_NEWTAB", function () {
+      onReels(true, true, true);
+    });
+
+    // Running if user left-click download icon in reels
+    $("body").on("click", ".IG_REELS_THUMBNAIL", function () {
+      onReels(true, false);
+    });
+
+    // Running if user right-click profile picture in stories area
+    $("body").on(
+      "mousedown",
+      'button[role="menuitem"], div[role="menuitem"], ul > li[tabindex="-1"] > div[role="button"]',
+      function (e) {
+        // Right-Click || Middle-Click
+        if (e.which === 3 || e.which === 2) {
+          if (
+            location.href === "https://www.instagram.com/" &&
+            USER_SETTING.REDIRECT_CLICK_USER_STORY_PICTURE
+          ) {
+            e.preventDefault();
+
+            $(this)
+              .find("img")
+              .each(function () {
+                if (!$(this).data("contextmenu")) {
+                  $(this).data("contextmenu", true);
+                  $(this).on("contextmenu", function (e) {
+                    e.preventDefault();
+                  });
+                }
+              });
+
+            if ($(this).find("canvas._aarh, canvas + span > img").length > 0) {
+              const targetUrl =
+                "https://www.instagram.com/" +
+                $(this).children("div").last().text();
+              if (e.which === 2) {
+                GM_openInTab(targetUrl);
+              } else {
+                location.href = targetUrl;
+              }
+            }
+          }
+        }
+      },
+    );
+
+    $("body").on("change", ".IG_POPUP_DIG_TITLE .checkbox", function () {
+      const isChecked = $(this).find("input").prop("checked");
+      $(".IG_POPUP_DIG_BODY .inner_box").each(function () {
+        $(this).prop("checked", isChecked);
+      });
+      updatePopupSelectionSummary();
+    });
+
+    $("body").on("change", ".IG_POPUP_DIG_BODY .inner_box", function () {
+      updatePopupSelectionSummary();
+    });
+
+    $("body").on(
+      "click",
+      ".IG_POPUP_DIG_TITLE #batch_download_selected",
+      async function (e) {
+        consumeInjectedClick(e);
+        let index = 0;
+        let links = [];
+        $('.IG_POPUP_DIG_BODY a[data-needed="direct"]').each(function () {
+          let $link = $(this);
+          if ($link.prev().children("input").prop("checked")) {
+            links.push($link);
+            index++;
+          }
+        });
+
+        if (index == 0) {
+          alert(_i18n("NO_CHECK_RESOURCE"));
+        } else {
+          await batchDownloadPostFiles(links);
+        }
+      },
+    );
+
+    $("body").on("change", ".IG_POPUP_DIG_BODY #langSelect", function () {
+      GM_setValue("UI_LANGUAGE", $(this).val());
+      state.lang = $(this).val();
+      translationTextCache = null;
+
+      if (state.lang?.startsWith("en") || state.locale[state.lang] != null) {
+        repaintingTranslations();
+        registerMenuCommand();
+      } else {
+        getTranslationText(state.lang)
+          .then((res) => {
+            state.locale[state.lang] = res;
+            translationTextCache = null;
+            repaintingTranslations();
+            registerMenuCommand();
+          })
+          .catch((err) => {
+            console.error("getTranslationText catch error:", err);
+          });
+      }
+    });
+
+    $("body").on(
+      "click",
+      ".IG_POPUP_DIG_TITLE #batch_download_direct",
+      async function (e) {
+        consumeInjectedClick(e);
+        let links = [];
+        $('.IG_POPUP_DIG_BODY a[data-needed="direct"]').each(function () {
+          links.push($(this));
+        });
+
+        await batchDownloadPostFiles(links);
+      },
+    );
+
+    registerPerformanceObserver();
+
+    const element_observer = new MutationObserver((mutationsList) => {
+      for (const mutation of mutationsList) {
+        if (mutation.type === "childList") {
+          mutation.addedNodes.forEach((node) => {
+            const $videos = $(node)
+              .filter("video")
+              .add($(node).find("video"));
+
+            if (location.pathname.startsWith("/stories/highlights/")) {
+              if (
+                $(node).attr("data-ih-locale-title") == null &&
+                $(node).attr("data-visualcompletion") == null &&
+                node.tagName === "DIV"
+              ) {
+                // replace something times ago format to publish time when switch highlight
+                var $time = getHighlightCurrentTimeElement($(node));
+                setTimeElementDateAndLocaleTime($time);
+              }
+            }
+
+            if ($videos.length > 0) {
+              // Modify video volume
+              if (USER_SETTING.MODIFY_VIDEO_VOLUME) {
+                $videos.each(function () {
+                  $(this).on("play playing", function () {
+                    if (!$(this).data("modify")) {
+                      $(this).attr("data-modify", true);
+                      this.volume = state.videoVolume;
+                      logger(
+                        "(audio_observer) Added video event listener #modify",
+                      );
+                    }
+                  });
+                });
+              }
+
+              if (location.pathname.match(/^(\/stories\/)/gi)) {
+                const isHighlight =
+                  location.pathname.match(/^(\/stories\/highlights\/)/gi) !=
+                  null;
+                const storyType = isHighlight ? "highlight" : "story";
+
+                $videos.each(function () {
+                  $(this).on("timeupdate", function () {
+                    if (!$(this).data("modify-thumbnail")) {
+                      let $video = $(this);
+                      if (
+                        $video
+                          .parents("div[style][class]")
+                          .filter(function () {
+                            return $(this).width() == $video.width();
+                          })
+                          .find(
+                            ".IG_DWSTORY_THUMBNAIL, .IG_DWHISTORY_THUMBNAIL",
+                          ).length === 0
+                      ) {
+                        $(this).attr("data-modify-thumbnail", true);
+
+                        if (isHighlight) {
+                          onHighlightsStoryThumbnail(false);
+                        } else {
+                          onStoryThumbnail(false);
+                        }
+
+                        logger(
+                          `(${storyType})`,
+                          "Manually inserting thumbnail button",
+                        );
+                      } else {
+                        $(this).attr("data-modify-thumbnail", true);
+                        logger(
+                          `(${storyType})`,
+                          "Thumbnail button already inserted",
+                        );
+                      }
+                    }
+                  });
+
+                  var $video = $(this);
+
+                  const $storyControlHost = $video
+                    .parents("div[style][class]")
+                    .filter(function () {
+                      return $(this).width() == $video.width();
+                    })
+                    .first();
+
+                  if (USER_SETTING.HTML5_VIDEO_CONTROL) {
+                    registerHTML5VideoControls($video);
+                    $storyControlHost.find("div.volume_slider").remove();
+                  } else {
+                    toggleVolumeSilder(
+                      $video,
+                      $storyControlHost,
+                      storyType,
+                      "vertical",
+                    );
+                  }
+
+                });
+              }
+            }
+          });
+        }
+      }
+    });
+
+    element_observer.observe($('div[id^="mount"]')[0], {
+      childList: true,
+      subtree: true,
+    });
+  });
+})(jQuery, Mediabunny);
