@@ -17,7 +17,7 @@
 // @name:zh-CN         insta-controls
 // @name:zh-TW         insta-controls
 // @namespace          https://github.com/dev-ainz/insta-controls/
-// @version            v1.3.6
+// @version            v1.3.7
 // @description        Download photos and videos from Instagram posts in one click, including Stories, Reels, and profile pictures.
 // @description:ar     نزّل صورًا ومقاطع فيديو من منشورات Instagram بنقرة واحدة، بما في ذلك القصص وReels وصور الملف الشخصي.
 // @description:de     Lade Fotos und Videos aus Instagram-Beiträgen mit einem Klick herunter, einschließlich Stories, Reels und Profilbildern.
@@ -200,7 +200,11 @@
   const injectedButtonStyle = `
     :root {
       --insta-controls-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
-      --insta-controls-bg: rgba(24, 24, 27, 0.92);
+      /* Surfaces drawn over media stay free of backdrop-filter: Chromium cannot
+         keep a video on a hardware overlay plane beneath a filtered layer,
+         which turns off GPU video processing such as RTX Video Super
+         Resolution and RTX Video HDR. */
+      --insta-controls-bg: rgba(24, 24, 27, 0.97);
       --insta-controls-bg-strong: rgba(13, 13, 15, 0.97);
       --insta-controls-surface: rgba(255, 255, 255, 0.07);
       --insta-controls-surface-hover: rgba(255, 255, 255, 0.12);
@@ -238,12 +242,10 @@
       padding: 5px;
       overflow: hidden;
       isolation: isolate;
-      background: linear-gradient(180deg, rgba(38, 38, 42, 0.84), rgba(16, 16, 18, 0.8));
+      background: linear-gradient(180deg, rgba(38, 38, 42, 0.95), rgba(16, 16, 18, 0.93));
       border: 1px solid rgba(255, 255, 255, 0.16);
       border-radius: 16px;
       box-shadow: 0 12px 36px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-      -webkit-backdrop-filter: saturate(180%) blur(22px);
-      backdrop-filter: saturate(180%) blur(22px);
     }
 
     /* Keep post controls out of the media until the pointer enters it.
@@ -367,8 +369,6 @@
       opacity: 0;
       pointer-events: none;
       transform: translate(-50%, 10px) scale(0.98);
-      -webkit-backdrop-filter: saturate(180%) blur(22px);
-      backdrop-filter: saturate(180%) blur(22px);
       transition: opacity 180ms ease, transform 180ms ease;
     }
 
@@ -406,8 +406,6 @@
       border: 1px solid var(--insta-controls-separator);
       border-radius: 10px;
       box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-      -webkit-backdrop-filter: saturate(160%) blur(16px);
-      backdrop-filter: saturate(160%) blur(16px);
       transition: color 160ms ease, background 160ms ease, transform 160ms ease;
     }
 
@@ -466,16 +464,6 @@
       border-radius: 50%;
     }
 
-    /* Keep Reels controls out of Safari's dynamic backdrop-filter layers.
-       Instagram repaints this rail when Like state changes. */
-    .IG_REELS,
-    .IG_REELS_NEWTAB,
-    .IG_REELS_THUMBNAIL {
-      background: rgba(24, 24, 27, 0.97);
-      -webkit-backdrop-filter: none;
-      backdrop-filter: none;
-    }
-
     .IG_REELS_CONTROLS {
       display: flex;
       flex: 0 0 auto;
@@ -506,8 +494,6 @@
       border: 1px solid var(--insta-controls-separator);
       border-radius: 10px;
       box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
-      -webkit-backdrop-filter: saturate(160%) blur(16px);
-      backdrop-filter: saturate(160%) blur(16px);
       font-family: var(--insta-controls-font);
       font-size: 10px;
       font-weight: 600;
@@ -1144,8 +1130,6 @@
       border: 1px solid var(--insta-controls-separator);
       border-radius: 11px;
       box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
-      -webkit-backdrop-filter: none;
-      backdrop-filter: none;
       transition: background 150ms ease, transform 150ms ease;
     }
 
@@ -1181,8 +1165,6 @@
       border: 1px solid var(--insta-controls-separator);
       border-radius: 999px;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
-      -webkit-backdrop-filter: saturate(160%) blur(16px);
-      backdrop-filter: saturate(160%) blur(16px);
     }
 
     .volume_slider input[type="range"]::-webkit-slider-runnable-track {
@@ -1229,8 +1211,6 @@
       border: 1px solid var(--insta-controls-separator);
       border-radius: 999px;
       box-shadow: 0 12px 36px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-      -webkit-backdrop-filter: saturate(180%) blur(20px);
-      backdrop-filter: saturate(180%) blur(20px);
     }
 
     .circle_wrapper circle {
@@ -1330,28 +1310,6 @@
     @keyframes insta-controls-breathe {
       from { opacity: 0.45; transform: translateY(-1px); }
       to { opacity: 1; transform: translateY(1px); }
-    }
-
-    @supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
-      .button_wrapper,
-      .IG_REELS,
-      .IG_REELS_NEWTAB,
-      .IG_REELS_THUMBNAIL,
-      .IG_DWSTORY,
-      .IG_DWSTORY_ALL,
-      .IG_DWNEWTAB,
-      .IG_DWSTORY_THUMBNAIL,
-      .IG_DWHISTORY,
-      .IG_DWHISTORY_ALL,
-      .IG_DWHINEWTAB,
-      .IG_DWHISTORY_THUMBNAIL,
-      .IG_DWPROFILE,
-      .circle_wrapper,
-      #scrollWrapper .button-up,
-      #scrollWrapper .button-down,
-      .volume_slider > div {
-        background: rgba(20, 20, 22, 0.97);
-      }
     }
 
     @media (max-width: 560px) {
@@ -2546,11 +2504,6 @@
       subtree: true,
     });
 
-    document.addEventListener(
-      "contextmenu",
-      handleHTML5VideoControlsContextMenu,
-      true,
-    );
     // The browser consumes input on its native controls, so the last known
     // pointer position tells which video the user is operating.
     ["pointermove", "pointerdown", "mousemove"].forEach(function (eventName) {
@@ -2620,11 +2573,7 @@
       .filter((video) => video instanceof HTMLVideoElement)
       .forEach(function (video) {
         const record = getHTML5VideoControlRecord(video);
-        if (
-          USER_SETTING.HTML5_VIDEO_CONTROL &&
-          !record.userDisabled &&
-          video.isConnected
-        ) {
+        if (USER_SETTING.HTML5_VIDEO_CONTROL && video.isConnected) {
           activateHTML5VideoControls(video, record);
         }
       });
@@ -2766,7 +2715,6 @@
       seekAudioExpiresAt: 0,
       seekAudioState: null,
       seekAudioTimer: null,
-      userDisabled: false,
       listeners: {
         beginSeek,
         finishSeek,
@@ -3208,7 +3156,6 @@
     if (!USER_SETTING.HTML5_VIDEO_CONTROL || !video.isConnected) return;
 
     record.active = true;
-    record.userDisabled = false;
 
     if (
       !record.changedPosition &&
@@ -3271,16 +3218,14 @@
 
   /**
    * @param {HTMLVideoElement} video
-   * @param {Boolean} userDisabled
    * @return {void}
    */
-  function deactivateHTML5VideoControls(video, userDisabled = false) {
+  function deactivateHTML5VideoControls(video) {
     const manager = state.GL_nativeControls;
     const record = manager.records.get(video);
     if (!record) return;
 
     record.active = false;
-    record.userDisabled = userDisabled;
     if (record.refreshTimer != null) {
       clearTimeout(record.refreshTimer);
       record.refreshTimer = null;
@@ -3338,93 +3283,13 @@
     if (enabled) {
       $(".volume_slider").remove();
       document.querySelectorAll("video").forEach(function (video) {
-        const record = getHTML5VideoControlRecord(video);
-        record.userDisabled = false;
-        activateHTML5VideoControls(video, record);
+        activateHTML5VideoControls(video, getHTML5VideoControlRecord(video));
       });
     } else {
       Array.from(manager.videos).forEach(function (video) {
-        deactivateHTML5VideoControls(video, false);
+        deactivateHTML5VideoControls(video);
       });
     }
-  }
-
-  /**
-   * @param {MouseEvent} event
-   * @return {void}
-   */
-  function handleHTML5VideoControlsContextMenu(event) {
-    if (!USER_SETTING.HTML5_VIDEO_CONTROL) return;
-    if (
-      event.target?.closest?.(NATIVE_CONTROLS_EXCLUDED_SELECTOR)
-    ) {
-      return;
-    }
-
-    const video = findHTML5VideoAtPoint(event.clientX, event.clientY, event);
-    if (!video) return;
-
-    event.preventDefault();
-    event.stopPropagation();
-    if (event.stopImmediatePropagation) event.stopImmediatePropagation();
-
-    const record = getHTML5VideoControlRecord(video);
-    if (record.active) {
-      deactivateHTML5VideoControls(video, true);
-    } else {
-      record.userDisabled = false;
-      activateHTML5VideoControls(video, record);
-    }
-  }
-
-  /**
-   * @param {Number} clientX
-   * @param {Number} clientY
-   * @param {Event} event
-   * @return {HTMLVideoElement|null}
-   */
-  function findHTML5VideoAtPoint(clientX, clientY, event) {
-    const pathVideo = event
-      ?.composedPath?.()
-      ?.find((element) => element instanceof HTMLVideoElement);
-    if (pathVideo) return pathVideo;
-
-    const candidates = [];
-    document.querySelectorAll("video").forEach(function (video) {
-      const rect = video.getBoundingClientRect();
-      if (
-        rect.width < 32 ||
-        rect.height < 32 ||
-        clientX < rect.left ||
-        clientX > rect.right ||
-        clientY < rect.top ||
-        clientY > rect.bottom
-      ) {
-        return;
-      }
-
-      const style = window.getComputedStyle(video);
-      if (
-        style.display === "none" ||
-        style.visibility === "hidden" ||
-        Number(style.opacity) <= 0.01
-      ) {
-        return;
-      }
-
-      candidates.push({
-        area: rect.width * rect.height,
-        video,
-      });
-    });
-
-    candidates.sort(function (a, b) {
-      const aActive = state.GL_nativeControls.records.get(a.video)?.active ? 1 : 0;
-      const bActive = state.GL_nativeControls.records.get(b.video)?.active ? 1 : 0;
-      return bActive - aActive || a.area - b.area;
-    });
-
-    return candidates[0]?.video || null;
   }
 
   /**
@@ -3839,7 +3704,7 @@
         return;
       }
 
-      deactivateHTML5VideoControls(video, false);
+      deactivateHTML5VideoControls(video);
       record.attributeObserver?.disconnect();
       record.resizeObserver?.disconnect();
       HTML5_VIDEO_INSTAGRAM_EVENTS.forEach(function (eventName) {
@@ -12021,7 +11886,7 @@
         DISABLE_VIDEO_LOOPING_INTRO:
           "Disable video auto-looping in Reels and posts.",
         HTML5_VIDEO_CONTROL_INTRO:
-          "Display the native HTML5 video controls for Instagram videos.\n\nThe controls stay attached when Instagram replaces or reuses its player, and the mute and volume you choose carry over to every video. Right-click the current video to switch between the native controls and Instagram's original overlay.",
+          "Display the native HTML5 video controls for Instagram videos.\n\nThe controls stay attached when Instagram replaces or reuses its player, and the mute and volume you choose carry over to every video.",
         MAX_REEL_PLAYBACK_QUALITY_INTRO:
           "Hold the active Reel's poster for up to five seconds while loading the highest-resolution complete progressive MP4 reported by Instagram. This uses more bandwidth and a private metadata request. Native playback resumes if the request is throttled, fails, times out, or Safari rejects the source. DASH downloads are separate and may provide a higher-resolution saved file.",
         REDIRECT_CLICK_USER_STORY_PICTURE_INTRO:
