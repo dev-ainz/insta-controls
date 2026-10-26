@@ -17,7 +17,7 @@
 // @name:zh-CN         insta-controls
 // @name:zh-TW         insta-controls
 // @namespace          https://github.com/dev-ainz/insta-controls/
-// @version            v1.3.11
+// @version            v1.3.12
 // @description        Download photos and videos from Instagram posts in one click, including Stories, Reels, and profile pictures.
 // @description:ar     نزّل صورًا ومقاطع فيديو من منشورات Instagram بنقرة واحدة، بما في ذلك القصص وReels وصور الملف الشخصي.
 // @description:de     Lade Fotos und Videos aus Instagram-Beiträgen mit einem Klick herunter, einschließlich Stories, Reels und Profilbildern.
@@ -2907,7 +2907,8 @@
         bubbles: true,
         cancelable: true,
         composed: true,
-        view: window,
+        // The userscript's own window is a sandbox proxy, not a Window.
+        view: event.view,
         detail: event.detail,
         screenX: event.screenX,
         screenY: event.screenY,
