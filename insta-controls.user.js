@@ -17,7 +17,7 @@
 // @name:zh-CN         insta-controls
 // @name:zh-TW         insta-controls
 // @namespace          https://github.com/dev-ainz/insta-controls/
-// @version            v1.3.13
+// @version            v1.3.14
 // @description        Download photos and videos from Instagram posts in one click, including Stories, Reels, and profile pictures.
 // @description:ar     نزّل صورًا ومقاطع فيديو من منشورات Instagram بنقرة واحدة، بما في ذلك القصص وReels وصور الملف الشخصي.
 // @description:de     Lade Fotos und Videos aus Instagram-Beiträgen mit einem Klick herunter, einschließlich Stories, Reels und Profilbildern.
@@ -140,6 +140,12 @@
   // How long a clicked picture stays shielded for the second click of a
   // double-click; covers common system double-click times.
   const NATIVE_CONTROLS_DOUBLE_CLICK_WINDOW = 500;
+  // Openings of the path in Instagram's Like icon: outlined until the post is
+  // liked, filled afterwards. They identify the icon in every locale.
+  const LIKE_ICON_PATH_PREFIX = "M16.792 3.904";
+  const LIKED_ICON_PATH_PREFIX = "M34.6 3.1";
+  // Comment Like icons are smaller than the post's own Like icon.
+  const LIKE_ICON_MIN_SIZE = 20;
   // Instagram rewrites the audio state within a few ms of a playback
   // transition, so changes inside this window are never the user's.
   const NATIVE_AUDIO_TRANSITION_GRACE = 250;
@@ -205,6 +211,8 @@
       '<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="m6.5 6.5 11 11"/><path d="m17.5 6.5-11 11"/></svg>',
     FULLSCREEN:
       '<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9.25 4.75h-4.5v4.5"/><path d="M14.75 4.75h4.5v4.5"/><path d="M19.25 14.75v4.5h-4.5"/><path d="M9.25 19.25h-4.5v-4.5"/></svg>',
+    LIKE_HEART:
+      '<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 20.6c-.3 0-.6-.1-.8-.3C6.2 15.9 2.75 12.8 2.75 8.9A4.65 4.65 0 0 1 7.4 4.25c1.86 0 3.5.98 4.6 2.5 1.1-1.52 2.74-2.5 4.6-2.5a4.65 4.65 0 0 1 4.65 4.65c0 3.9-3.45 7-8.45 11.4-.2.2-.5.3-.8.3Z"/></svg>',
     TURN_DEG:
       '<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7.25 7.5h-3.5V4"/><path d="M4.4 7.1A8 8 0 1 1 4.5 16.75"/></svg>',
   };
@@ -1443,6 +1451,43 @@
       user-select: none;
     }
 
+    /* Mirrors Instagram's double-tap heart over a liked video. */
+    .insta-controls-like-heart {
+      position: fixed;
+      z-index: 2147483647;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      pointer-events: none;
+      filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.35));
+      animation: insta-controls-like-heart 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+
+    .insta-controls-like-heart svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    @keyframes insta-controls-like-heart {
+      0% { opacity: 0; transform: scale(0.2); }
+      15% { opacity: 1; transform: scale(1.18); }
+      30% { transform: scale(0.94); }
+      45% { transform: scale(1); }
+      75% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(0.82) translateY(-12%); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .insta-controls-like-heart {
+        animation-name: insta-controls-like-heart-fade;
+      }
+
+      @keyframes insta-controls-like-heart-fade {
+        0%, 100% { opacity: 0; }
+        20%, 70% { opacity: 1; }
+      }
+    }
+
     .insta-controls-native-controls-hidden {
       visibility: hidden !important;
       pointer-events: none !important;
@@ -2652,14 +2697,14 @@
 
       if (event.type === "dblclick" && isHTML5VideoPictureClick(video, event)) {
         event.preventDefault();
-        forwardHTML5VideoDoubleClick(video, record, event);
+        likeHTML5VideoPost(video);
       }
     };
     const handlePictureClick = function (event) {
       if (!record.active || !isHTML5VideoPictureClick(video, event)) return;
 
       // The browser's own controls turn two clicks on the picture into
-      // fullscreen; cancelling them here keeps the double-click for Instagram.
+      // fullscreen; cancelling them here keeps the double-click for liking.
       event.preventDefault();
       event.stopPropagation();
       if (event.stopImmediatePropagation) event.stopImmediatePropagation();
@@ -2963,7 +3008,7 @@
       const owner = getOwner();
       hideHTML5VideoClickShield();
       if (owner && event.isTrusted && event.button === 0) {
-        forwardHTML5VideoDoubleClick(owner.video, owner.record, event);
+        likeHTML5VideoPost(owner.video);
       }
     });
     // Anything but a second click means the double-click is over.
@@ -2995,66 +3040,79 @@
   }
 
   /**
-   * forwardHTML5VideoDoubleClick
-   * @description Hand a double-click on the picture to Instagram's media layer
-   *              so it likes the post.
+   * likeHTML5VideoPost
+   * @description Like the post or Reel that owns a video, as Instagram's
+   *              double-tap does: it only ever likes, never unlikes. Instagram
+   *              does not like videos on double-click itself (a click opens
+   *              the Reel), so its Like button is pressed instead.
    *
    * @param {HTMLVideoElement} video
-   * @param {Object} record
-   * @param {MouseEvent} event
    * @return {void}
    */
-  function forwardHTML5VideoDoubleClick(video, record, event) {
-    const target = findHTML5VideoDoubleClickTarget(
-      video,
-      record,
-      event.clientX,
-      event.clientY,
-    );
-    if (!target) return;
+  function likeHTML5VideoPost(video) {
+    if (location.pathname.startsWith("/stories/")) return;
 
-    target.dispatchEvent(
-      new MouseEvent("dblclick", {
-        bubbles: true,
-        cancelable: true,
-        composed: true,
-        detail: event.detail,
-        screenX: event.screenX,
-        screenY: event.screenY,
-        clientX: event.clientX,
-        clientY: event.clientY,
-        ctrlKey: event.ctrlKey,
-        shiftKey: event.shiftKey,
-        altKey: event.altKey,
-        metaKey: event.metaKey,
-        button: event.button,
-        buttons: event.buttons,
-      }),
-    );
+    const likeIcon = findHTML5VideoLikeIcon(video);
+    if (!likeIcon) return;
+
+    showHTML5VideoLikeHeart(video);
+    if (!likeIcon.liked) likeIcon.button.click();
   }
 
   /**
    * @param {HTMLVideoElement} video
-   * @param {Object} record
-   * @param {Number} x
-   * @param {Number} y
-   * @return {?Element}
+   * @return {?{button: Element, liked: Boolean}}
    */
-  function findHTML5VideoDoubleClickTarget(video, record, x, y) {
-    // The click-through layer under the pointer is what Instagram would have
-    // received; prefer the innermost one when layers are nested.
-    const hits = Array.from(record.blockers).filter(function (element) {
-      if (!element.isConnected) return false;
-      const rect = element.getBoundingClientRect();
-      return (
-        x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
-      );
-    });
-    const innermost = hits.find(function (element) {
-      return !hits.some((other) => other !== element && element.contains(other));
-    });
+  function findHTML5VideoLikeIcon(video) {
+    // The nearest ancestor holding a Like icon is the video's own post or
+    // Reel; larger ones also hold neighboring posts.
+    let ancestor = video.parentElement;
+    for (let depth = 0; ancestor && ancestor !== document.body && depth < 40; depth++) {
+      for (const icon of ancestor.querySelectorAll("svg")) {
+        const path = icon.querySelector("path")?.getAttribute("d") || "";
+        const liked = path.startsWith(LIKED_ICON_PATH_PREFIX);
+        if (!liked && !path.startsWith(LIKE_ICON_PATH_PREFIX)) continue;
+        if (icon.getBoundingClientRect().height < LIKE_ICON_MIN_SIZE) continue;
 
-    return innermost || video.parentElement;
+        // The Notifications link in the navigation uses the same heart.
+        const button = icon.closest('[role="button"], button');
+        if (!button || icon.closest('nav, a[href], [role="link"]')) continue;
+
+        return { button, liked };
+      }
+      ancestor = ancestor.parentElement;
+    }
+
+    return null;
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @return {void}
+   */
+  function showHTML5VideoLikeHeart(video) {
+    const rect = video.getBoundingClientRect();
+    if (rect.width < 1 || rect.height < 1 || !document.body) return;
+
+    const size = Math.round(
+      Math.max(56, Math.min(120, Math.min(rect.width, rect.height) * 0.28)),
+    );
+    const heart = document.createElement("div");
+    heart.className = "insta-controls-like-heart";
+    heart.setAttribute("aria-hidden", "true");
+    heart.innerHTML = SVG.LIKE_HEART;
+    heart.style.width = `${size}px`;
+    heart.style.height = `${size}px`;
+    heart.style.left = `${Math.round(rect.left + (rect.width - size) / 2)}px`;
+    heart.style.top = `${Math.round(rect.top + (rect.height - size) / 2)}px`;
+
+    const remove = function () {
+      clearTimeout(fallback);
+      heart.remove();
+    };
+    const fallback = setTimeout(remove, 1500);
+    heart.addEventListener("animationend", remove, { once: true });
+    document.body.appendChild(heart);
   }
 
   /**
