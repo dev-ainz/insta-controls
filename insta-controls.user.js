@@ -17,7 +17,7 @@
 // @name:zh-CN         insta-controls
 // @name:zh-TW         insta-controls
 // @namespace          https://github.com/dev-ainz/insta-controls/
-// @version            v1.3.5
+// @version            v1.3.6
 // @description        Download photos and videos from Instagram posts in one click, including Stories, Reels, and profile pictures.
 // @description:ar     نزّل صورًا ومقاطع فيديو من منشورات Instagram بنقرة واحدة، بما في ذلك القصص وReels وصور الملف الشخصي.
 // @description:de     Lade Fotos und Videos aus Instagram-Beiträgen mit einem Klick herunter, einschließlich Stories, Reels und Profilbildern.
@@ -131,6 +131,40 @@
   const REEL_QUALITY_FAILURE_RETRY_DELAY = 60 * 1000;
   const REEL_QUALITY_RATE_LIMIT_COOLDOWN = 5 * 60 * 1000;
   const REEL_QUALITY_CACHE_MAX_AGE = 30 * 60 * 1000;
+  // Height reserved above the bottom edge for the browser's native control bar.
+  const NATIVE_CONTROLS_CLEARANCE = 64;
+  // Instagram rewrites the audio state within a few ms of a playback
+  // transition, so changes inside this window are never the user's.
+  const NATIVE_AUDIO_TRANSITION_GRACE = 250;
+  const NATIVE_AUDIO_ENFORCEMENT_WINDOW = 3000;
+  const NATIVE_AUDIO_ENFORCEMENT_LIMIT = 8;
+  const NATIVE_AUDIO_PREFERENCE_KEY = "G_NATIVE_VIDEO_AUDIO";
+  const NATIVE_CONTROLS_EXCLUDED_SELECTOR =
+    ".button_wrapper, .IG_REELS_CONTROLS, .volume_slider, .IG_POPUP_DIG, #imageViewer";
+  const NATIVE_CONTROLS_INTERACTIVE_SELECTOR =
+    'a[href], button, input, select, textarea, [role="button"], [role="link"]';
+  // Pointer events kept away from Instagram's own player handlers.
+  const HTML5_VIDEO_INSTAGRAM_EVENTS = [
+    "click",
+    "dblclick",
+    "mousedown",
+    "mouseup",
+    "pointerdown",
+    "pointerup",
+    "touchstart",
+    "touchend",
+  ];
+  // Playback transitions after which Instagram rewrites the audio state.
+  const HTML5_VIDEO_TRANSITION_EVENTS = [
+    "play",
+    "playing",
+    "pause",
+    "seeking",
+    "ended",
+    "emptied",
+    "loadstart",
+    "loadeddata",
+  ];
   /*******************************/
 
   // Precision line icons shared by every insta-controls surface.
@@ -1405,6 +1439,22 @@
       pointer-events: none !important;
     }
 
+    /* Instagram content that would sit on the native control bar is moved
+       just above it; groups holding buttons or links stay clickable. */
+    .insta-controls-native-controls-lifted {
+      translate: 0 calc(-1 * var(--insta-controls-native-lift, 0px)) !important;
+    }
+
+    .insta-controls-native-controls-clickable {
+      pointer-events: auto !important;
+    }
+
+    /* Instagram's volume button duplicates the native volume control. */
+    .insta-controls-native-controls-hidden {
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+
     .insta-controls-reel-quality-hold {
       position: fixed;
       z-index: 2147483000;
@@ -1508,11 +1558,16 @@
       mutedButton: new WeakMap(),
     },
     GL_nativeControls: {
+      activationAudioApplied: false,
+      audioPreference: readNativeAudioPreference(),
       blockerOwners: new WeakMap(),
       initialized: false,
       mutationObserver: null,
+      pointer: null,
       records: new WeakMap(),
       refreshFrame: null,
+      scrollTimer: null,
+      userActivated: false,
       videos: new Set(),
     },
     debugHotkeyKeyCode: GM_getValue("G_HOTKEY_DEBUG_KEYCODE")
@@ -2496,7 +2551,29 @@
       handleHTML5VideoControlsContextMenu,
       true,
     );
+    // The browser consumes input on its native controls, so the last known
+    // pointer position tells which video the user is operating.
+    ["pointermove", "pointerdown", "mousemove"].forEach(function (eventName) {
+      window.addEventListener(eventName, trackHTML5VideoPointer, {
+        capture: true,
+        passive: true,
+      });
+    });
+    ["pointerdown", "keydown", "touchend"].forEach(function (eventName) {
+      document.addEventListener(eventName, markHTML5VideoUserActivation, true);
+    });
+    ["click", "keyup", "touchend"].forEach(function (eventName) {
+      document.addEventListener(
+        eventName,
+        applyPendingHTML5VideoAudioPreference,
+        true,
+      );
+    });
     window.addEventListener("resize", queueHTML5VideoControlsRefresh);
+    document.addEventListener("scroll", queueHTML5VideoControlsScrollRefresh, {
+      capture: true,
+      passive: true,
+    });
     document.addEventListener("fullscreenchange", function () {
       queueHTML5VideoControlsRefresh();
       state.GL_nativeControls.videos.forEach(function (video) {
@@ -2600,7 +2677,9 @@
         now - pointerState.capturedAt <= 1000 &&
         pointerState.capturedAt >= record.audioStateUpdatedAt
           ? pointerState
-          : record.audioState || readHTML5VideoAudioState(video);
+          : getDesiredHTML5VideoAudioState(video) ||
+            record.audioState ||
+            readHTML5VideoAudioState(video);
 
       record.seekAudioState = {
         muted: Boolean(baseline.muted),
@@ -2626,30 +2705,40 @@
         record.seekAudioState = null;
       }, 300);
     };
+    const markTransition = function (event) {
+      record.lastTransitionAt = performance.now();
+      if (!record.active) return;
+
+      // Instagram re-applies its own mute state whenever playback starts.
+      if (event.type === "play" || event.type === "loadeddata") {
+        applyHTML5VideoAudioPreference(video, record);
+      }
+    };
     const handleVolumeChange = function () {
       if (!record.active || record.restoringAudio) return;
 
-      const guardedAudioState = getGuardedHTML5VideoAudioState(record);
-      if (guardedAudioState) {
-        const volumeChanged =
-          Math.abs(video.volume - guardedAudioState.volume) > 0.001;
-        if (video.muted !== guardedAudioState.muted || volumeChanged) {
-          queueMicrotask(function () {
-            const currentGuard = getGuardedHTML5VideoAudioState(record);
-            if (record.active && currentGuard) {
-              restoreHTML5VideoAudioState(video, record, currentGuard);
-            }
-          });
-        }
+      const current = readHTML5VideoAudioState(video);
+      if (isUserHTML5VideoAudioChange(video, record)) {
+        rememberHTML5VideoAudioPreference(video, record, current);
         return;
       }
 
-      record.audioState = readHTML5VideoAudioState(video);
-      record.audioStateUpdatedAt = performance.now();
-      if (!video.muted && Number.isFinite(video.volume)) {
-        state.videoVolume = video.volume;
-        GM_setValue("G_VIDEO_VOLUME", video.volume);
+      const desired =
+        getGuardedHTML5VideoAudioState(record) ||
+        getDesiredHTML5VideoAudioState(video);
+      if (desired && !isSameHTML5VideoAudioState(current, desired)) {
+        queueMicrotask(function () {
+          if (!record.active) return;
+          const target =
+            getGuardedHTML5VideoAudioState(record) ||
+            getDesiredHTML5VideoAudioState(video);
+          if (target) enforceHTML5VideoAudioState(video, record, target);
+        });
+        return;
       }
+
+      record.audioState = current;
+      record.audioStateUpdatedAt = performance.now();
     };
 
     record = {
@@ -2657,11 +2746,14 @@
       attributeObserver: null,
       audioState: readHTML5VideoAudioState(video),
       audioStateUpdatedAt: performance.now(),
+      arranged: new Set(),
       blockers: new Set(),
       changedPosition: false,
+      enforcements: [],
       handoffAudioExpiresAt: 0,
       handoffAudioState: null,
       handoffAudioTimer: null,
+      lastTransitionAt: -Infinity,
       originalControls: video.controls,
       originalControlsAttribute: video.getAttribute("controls"),
       originalDraggableAttribute: video.getAttribute("draggable"),
@@ -2679,6 +2771,7 @@
         beginSeek,
         finishSeek,
         handleVolumeChange,
+        markTransition,
         refresh,
         stopDrag,
         stopInstagramEvent,
@@ -2688,17 +2781,11 @@
     manager.records.set(video, record);
     manager.videos.add(video);
 
-    [
-      "click",
-      "dblclick",
-      "mousedown",
-      "mouseup",
-      "pointerdown",
-      "pointerup",
-      "touchstart",
-      "touchend",
-    ].forEach(function (eventName) {
+    HTML5_VIDEO_INSTAGRAM_EVENTS.forEach(function (eventName) {
       video.addEventListener(eventName, stopInstagramEvent);
+    });
+    HTML5_VIDEO_TRANSITION_EVENTS.forEach(function (eventName) {
+      video.addEventListener(eventName, markTransition, true);
     });
     video.addEventListener("dragstart", stopDrag);
     video.addEventListener("loadedmetadata", refresh);
@@ -2729,6 +2816,233 @@
     }
 
     return record;
+  }
+
+  /**
+   * readNativeAudioPreference
+   * @description Load the audio state last chosen through the native controls.
+   *
+   * @return {?{muted: Boolean, volume: Number}}
+   */
+  function readNativeAudioPreference() {
+    const stored = GM_getValue(NATIVE_AUDIO_PREFERENCE_KEY);
+    if (!stored || typeof stored.muted !== "boolean") return null;
+
+    return {
+      muted: stored.muted,
+      volume: normalizeHTML5VideoVolume(stored.volume, 1),
+    };
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @param {Object} record
+   * @return {Boolean}
+   */
+  function isUserHTML5VideoAudioChange(video, record) {
+    if (
+      performance.now() - record.lastTransitionAt <=
+      NATIVE_AUDIO_TRANSITION_GRACE
+    ) {
+      return false;
+    }
+
+    return isHTML5VideoUnderUserControl(video);
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @return {Boolean}
+   */
+  function isHTML5VideoUnderUserControl(video) {
+    const fullscreenElement =
+      document.fullscreenElement || document.webkitFullscreenElement;
+    if (
+      document.activeElement === video ||
+      (fullscreenElement && fullscreenElement.contains(video))
+    ) {
+      return true;
+    }
+
+    const pointer = state.GL_nativeControls.pointer;
+    if (!pointer) return false;
+
+    const rect = video.getBoundingClientRect();
+    return (
+      pointer.x >= rect.left &&
+      pointer.x <= rect.right &&
+      pointer.y >= rect.top &&
+      pointer.y <= rect.bottom
+    );
+  }
+
+  /**
+   * @param {PointerEvent|MouseEvent} event
+   * @return {void}
+   */
+  function trackHTML5VideoPointer(event) {
+    if (!event.isTrusted) return;
+
+    const manager = state.GL_nativeControls;
+    if (manager.pointer) {
+      manager.pointer.x = event.clientX;
+      manager.pointer.y = event.clientY;
+    } else {
+      manager.pointer = { x: event.clientX, y: event.clientY };
+    }
+  }
+
+  /**
+   * @param {{muted: Boolean, volume: Number}} a
+   * @param {{muted: Boolean, volume: Number}} b
+   * @return {Boolean}
+   */
+  function isSameHTML5VideoAudioState(a, b) {
+    return (
+      Boolean(a.muted) === Boolean(b.muted) &&
+      Math.abs(a.volume - b.volume) <= 0.001
+    );
+  }
+
+  /** @return {Boolean} */
+  function hasHTML5VideoUserActivation() {
+    const activation = navigator.userActivation;
+    if (activation && typeof activation.hasBeenActive === "boolean") {
+      return (
+        activation.hasBeenActive || state.GL_nativeControls.userActivated
+      );
+    }
+    return state.GL_nativeControls.userActivated;
+  }
+
+  /**
+   * @param {Event} event
+   * @return {void}
+   */
+  function markHTML5VideoUserActivation(event) {
+    if (event.isTrusted) state.GL_nativeControls.userActivated = true;
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @return {?{muted: Boolean, volume: Number}}
+   */
+  function getDesiredHTML5VideoAudioState(video) {
+    const preference = state.GL_nativeControls.audioPreference;
+    if (!preference) return null;
+
+    const volume = USER_SETTING.MODIFY_VIDEO_VOLUME
+      ? normalizeHTML5VideoVolume(state.videoVolume, preference.volume)
+      : preference.volume;
+    // Browsers block unmuted playback until the page has been interacted with.
+    const muted =
+      preference.muted || (!hasHTML5VideoUserActivation() && video.muted);
+
+    return { muted, volume };
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @param {Object} record
+   * @param {{muted: Boolean, volume: Number}} audioState
+   * @return {void}
+   */
+  function rememberHTML5VideoAudioPreference(video, record, audioState) {
+    const manager = state.GL_nativeControls;
+
+    record.audioState = audioState;
+    record.audioStateUpdatedAt = performance.now();
+    record.enforcements = [];
+    record.seekAudioState = null;
+    record.seekAudioExpiresAt = 0;
+    clearHTML5VideoAudioHandoff(video);
+
+    manager.audioPreference = {
+      muted: audioState.muted,
+      volume: audioState.volume,
+    };
+    GM_setValue(NATIVE_AUDIO_PREFERENCE_KEY, manager.audioPreference);
+
+    if (!audioState.muted) {
+      state.videoVolume = audioState.volume;
+      GM_setValue("G_VIDEO_VOLUME", audioState.volume);
+    }
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @param {Object} record
+   * @return {void}
+   */
+  function applyHTML5VideoAudioPreference(video, record) {
+    if (!record.active) return;
+
+    const desired =
+      getGuardedHTML5VideoAudioState(record) ||
+      getDesiredHTML5VideoAudioState(video);
+    if (
+      desired &&
+      !isSameHTML5VideoAudioState(readHTML5VideoAudioState(video), desired)
+    ) {
+      restoreHTML5VideoAudioState(video, record, desired);
+    }
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @param {Object} record
+   * @param {{muted: Boolean, volume: Number}} desired
+   * @return {void}
+   */
+  function enforceHTML5VideoAudioState(video, record, desired) {
+    if (isSameHTML5VideoAudioState(readHTML5VideoAudioState(video), desired)) {
+      return;
+    }
+
+    const now = performance.now();
+    record.enforcements = record.enforcements.filter(
+      (time) => now - time < NATIVE_AUDIO_ENFORCEMENT_WINDOW,
+    );
+    // Never fight a page script that keeps rewriting the audio state.
+    if (record.enforcements.length >= NATIVE_AUDIO_ENFORCEMENT_LIMIT) {
+      logger("[Native Controls] Accepted repeated external audio change");
+      record.audioState = readHTML5VideoAudioState(video);
+      record.audioStateUpdatedAt = now;
+      return;
+    }
+
+    record.enforcements.push(now);
+    restoreHTML5VideoAudioState(video, record, desired);
+  }
+
+  /**
+   * applyPendingHTML5VideoAudioPreference
+   * @description Unmute playing videos once the first user activation allows it.
+   *
+   * @param {Event} event
+   * @return {void}
+   */
+  function applyPendingHTML5VideoAudioPreference(event) {
+    const manager = state.GL_nativeControls;
+    if (
+      !event.isTrusted ||
+      manager.activationAudioApplied ||
+      !manager.audioPreference ||
+      !hasHTML5VideoUserActivation()
+    ) {
+      return;
+    }
+
+    manager.activationAudioApplied = true;
+    setTimeout(function () {
+      manager.videos.forEach(function (video) {
+        const record = manager.records.get(video);
+        if (!record?.active || !video.isConnected || video.paused) return;
+        // Leave a video the user is operating directly to its own controls.
+        if (isHTML5VideoUnderUserControl(video)) return;
+        applyHTML5VideoAudioPreference(video, record);
+      });
+    }, 0);
   }
 
   /**
@@ -2787,6 +3101,7 @@
 
     const source =
       getGuardedHTML5VideoAudioState(record) ||
+      getDesiredHTML5VideoAudioState(video) ||
       record.audioState ||
       readHTML5VideoAudioState(video);
     const preserved = {
@@ -2846,6 +3161,7 @@
 
     const source =
       getGuardedHTML5VideoAudioState(record) ||
+      getDesiredHTML5VideoAudioState(video) ||
       record.audioState ||
       readHTML5VideoAudioState(video);
     return {
@@ -3040,9 +3356,7 @@
   function handleHTML5VideoControlsContextMenu(event) {
     if (!USER_SETTING.HTML5_VIDEO_CONTROL) return;
     if (
-      event.target?.closest?.(
-        ".button_wrapper, .IG_REELS_CONTROLS, .volume_slider, .IG_POPUP_DIG, #imageViewer",
-      )
+      event.target?.closest?.(NATIVE_CONTROLS_EXCLUDED_SELECTOR)
     ) {
       return;
     }
@@ -3128,6 +3442,17 @@
   }
 
   /** @return {void} */
+  function queueHTML5VideoControlsScrollRefresh() {
+    const manager = state.GL_nativeControls;
+    if (manager.scrollTimer != null) clearTimeout(manager.scrollTimer);
+
+    manager.scrollTimer = setTimeout(function () {
+      manager.scrollTimer = null;
+      queueHTML5VideoControlsRefresh();
+    }, 150);
+  }
+
+  /** @return {void} */
   function queueHTML5VideoControlsRefresh() {
     const manager = state.GL_nativeControls;
     if (manager.refreshFrame != null) return;
@@ -3153,8 +3478,153 @@
     if (!record.active || !video.isConnected) return;
 
     releaseHTML5VideoBlockers(video, record);
+    // A clipped carousel slide still reports a box over neighboring page
+    // content, such as the comments column; leave that content alone.
+    if (!isHTML5VideoRendered(video)) return;
+
     collectHTML5VideoBlockers(video).forEach(function (element) {
       claimHTML5VideoBlocker(video, record, element);
+    });
+    arrangeHTML5VideoOverlayControls(video, record);
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @return {Boolean}
+   */
+  function isHTML5VideoRendered(video) {
+    const rect = video.getBoundingClientRect();
+    const left = Math.max(rect.left, 0);
+    const right = Math.min(rect.right, window.innerWidth);
+    const top = Math.max(rect.top, 0);
+    const bottom = Math.min(rect.bottom, window.innerHeight);
+    if (right - left < 1 || bottom - top < 1) return false;
+
+    return document
+      .elementsFromPoint((left + right) / 2, (top + bottom) / 2)
+      .includes(video);
+  }
+
+  /**
+   * arrangeHTML5VideoOverlayControls
+   * @description Keep Instagram's in-media buttons (Tags, carousel dots, Reel
+   *              details) off the native control bar, and hide Instagram's
+   *              volume button because the native controls replace it.
+   *
+   * @param {HTMLVideoElement} video
+   * @param {Object} record
+   * @return {void}
+   */
+  function arrangeHTML5VideoOverlayControls(video, record) {
+    const videoRect = video.getBoundingClientRect();
+    if (
+      videoRect.width < NATIVE_CONTROLS_CLEARANCE * 2 ||
+      videoRect.height < NATIVE_CONTROLS_CLEARANCE * 2
+    ) {
+      return;
+    }
+
+    const stripTop = videoRect.bottom - NATIVE_CONTROLS_CLEARANCE;
+    const tolerance = 4;
+    const visited = new Set();
+    const candidates = new Set();
+    let budget = 600;
+
+    const visit = function (element, depth) {
+      if (budget-- <= 0 || visited.has(element)) return;
+      visited.add(element);
+
+      Array.from(element.children).forEach(function (child) {
+        if (
+          child === video ||
+          child.contains(video) ||
+          child.closest(NATIVE_CONTROLS_EXCLUDED_SELECTOR)
+        ) {
+          return;
+        }
+
+        const rect = child.getBoundingClientRect();
+        const empty = rect.width <= 0 || rect.height <= 0;
+        const overlapsVideo =
+          rect.right > videoRect.left &&
+          rect.left < videoRect.right &&
+          rect.bottom > videoRect.top &&
+          rect.top < videoRect.bottom;
+        // Absolutely positioned layers often hang off zero-size wrappers.
+        if (empty || !overlapsVideo) {
+          if (empty && depth < 12) visit(child, depth + 1);
+          return;
+        }
+
+        const insideVideo =
+          rect.left >= videoRect.left - tolerance &&
+          rect.right <= videoRect.right + tolerance &&
+          rect.top >= videoRect.top - tolerance &&
+          rect.bottom <= videoRect.bottom + tolerance;
+        const surface = rect.height >= videoRect.height * 0.5;
+        if (surface || rect.bottom <= stripTop || !insideVideo) {
+          if (depth < 12) visit(child, depth + 1);
+          return;
+        }
+
+        candidates.add(child);
+      });
+    };
+
+    // Only the media box itself: larger ancestors hold the rest of the post.
+    // Degenerate boxes, such as a translated carousel track, are passed over.
+    let ancestor = video.parentElement;
+    for (let depth = 0; ancestor && depth < 32; depth++) {
+      const ancestorRect = ancestor.getBoundingClientRect();
+      if (ancestorRect.width <= 1 || ancestorRect.height <= 1) {
+        ancestor = ancestor.parentElement;
+        continue;
+      }
+      if (
+        ancestorRect.left < videoRect.left - tolerance * 2 ||
+        ancestorRect.right > videoRect.right + tolerance * 2 ||
+        ancestorRect.top < videoRect.top - tolerance * 2 ||
+        ancestorRect.bottom > videoRect.bottom + tolerance * 2
+      ) {
+        break;
+      }
+
+      visit(ancestor, 0);
+      ancestor = ancestor.parentElement;
+    }
+    record.blockers.forEach((blocker) => visit(blocker, 0));
+
+    candidates.forEach(function (element) {
+      const rect = element.getBoundingClientRect();
+      const isVolumeButton =
+        rect.width <= NATIVE_CONTROLS_CLEARANCE &&
+        rect.height <= NATIVE_CONTROLS_CLEARANCE &&
+        (element.matches('[role="slider"]') ||
+          element.querySelector('[role="slider"]') != null);
+
+      if (isVolumeButton) {
+        element.classList.add("insta-controls-native-controls-hidden");
+        record.arranged.add(element);
+        return;
+      }
+
+      const gap = Math.max(0, videoRect.bottom - rect.bottom);
+      const room = Math.max(0, rect.top - videoRect.top - tolerance);
+      const lift = Math.min(NATIVE_CONTROLS_CLEARANCE - gap, room);
+      if (lift < 1) return;
+
+      element.style.setProperty(
+        "--insta-controls-native-lift",
+        `${Math.round(lift)}px`,
+      );
+      element.classList.add("insta-controls-native-controls-lifted");
+      if (
+        element.matches(NATIVE_CONTROLS_INTERACTIVE_SELECTOR) ||
+        element.querySelector(NATIVE_CONTROLS_INTERACTIVE_SELECTOR) != null
+      ) {
+        element.classList.add("insta-controls-native-controls-clickable");
+      }
+      record.arranged.add(element);
     });
   }
 
@@ -3168,8 +3638,7 @@
     const videoArea = videoRect.width * videoRect.height;
     if (videoArea <= 0) return blockers;
 
-    const excludedSelector =
-      ".button_wrapper, .IG_REELS_CONTROLS, .volume_slider, .IG_POPUP_DIG, #imageViewer";
+    const excludedSelector = NATIVE_CONTROLS_EXCLUDED_SELECTOR;
     const shouldIgnore = function (element) {
       return (
         !(element instanceof Element) ||
@@ -3346,6 +3815,16 @@
       }
     });
     record.blockers.clear();
+
+    record.arranged.forEach(function (element) {
+      element.classList.remove(
+        "insta-controls-native-controls-lifted",
+        "insta-controls-native-controls-clickable",
+        "insta-controls-native-controls-hidden",
+      );
+      element.style.removeProperty("--insta-controls-native-lift");
+    });
+    record.arranged.clear();
   }
 
   /** @return {void} */
@@ -3363,17 +3842,11 @@
       deactivateHTML5VideoControls(video, false);
       record.attributeObserver?.disconnect();
       record.resizeObserver?.disconnect();
-      [
-        "click",
-        "dblclick",
-        "mousedown",
-        "mouseup",
-        "pointerdown",
-        "pointerup",
-        "touchstart",
-        "touchend",
-      ].forEach(function (eventName) {
+      HTML5_VIDEO_INSTAGRAM_EVENTS.forEach(function (eventName) {
         video.removeEventListener(eventName, record.listeners.stopInstagramEvent);
+      });
+      HTML5_VIDEO_TRANSITION_EVENTS.forEach(function (eventName) {
+        video.removeEventListener(eventName, record.listeners.markTransition, true);
       });
       video.removeEventListener("dragstart", record.listeners.stopDrag);
       video.removeEventListener("loadedmetadata", record.listeners.refresh);
@@ -11548,7 +12021,7 @@
         DISABLE_VIDEO_LOOPING_INTRO:
           "Disable video auto-looping in Reels and posts.",
         HTML5_VIDEO_CONTROL_INTRO:
-          "Display the native HTML5 video controls for Instagram videos.\n\nThe controls stay attached when Instagram replaces or reuses its player. Right-click the current video to switch between the native controls and Instagram's original overlay.",
+          "Display the native HTML5 video controls for Instagram videos.\n\nThe controls stay attached when Instagram replaces or reuses its player, and the mute and volume you choose carry over to every video. Right-click the current video to switch between the native controls and Instagram's original overlay.",
         MAX_REEL_PLAYBACK_QUALITY_INTRO:
           "Hold the active Reel's poster for up to five seconds while loading the highest-resolution complete progressive MP4 reported by Instagram. This uses more bandwidth and a private metadata request. Native playback resumes if the request is throttled, fails, times out, or Safari rejects the source. DASH downloads are separate and may provide a higher-resolution saved file.",
         REDIRECT_CLICK_USER_STORY_PICTURE_INTRO:
