@@ -17,7 +17,7 @@
 // @name:zh-CN         insta-controls
 // @name:zh-TW         insta-controls
 // @namespace          https://github.com/dev-ainz/insta-controls/
-// @version            v1.3.14
+// @version            v1.3.15
 // @description        Download photos and videos from Instagram posts in one click, including Stories, Reels, and profile pictures.
 // @description:ar     نزّل صورًا ومقاطع فيديو من منشورات Instagram بنقرة واحدة، بما في ذلك القصص وReels وصور الملف الشخصي.
 // @description:de     Lade Fotos und Videos aus Instagram-Beiträgen mit einem Klick herunter, einschließlich Stories, Reels und Profilbildern.
@@ -88,6 +88,8 @@
     /^((?!chrome|android|crios|fxios|edgios).)*safari/i.test(
       navigator.userAgent,
     );
+  // Firefox keeps mouse clicks on a video's native controls from the page.
+  const IS_FIREFOX = /\bFirefox\//.test(navigator.userAgent);
   const ENABLE_CONSOLE_LOGGING = false;
 
   const USER_SETTING = {
@@ -166,7 +168,7 @@
     "ended",
   ];
   const NATIVE_CONTROLS_EXCLUDED_SELECTOR =
-    ".button_wrapper, .IG_REELS_CONTROLS, .volume_slider, .IG_POPUP_DIG, #imageViewer";
+    ".button_wrapper, .IG_REELS_CONTROLS, .volume_slider, .IG_POPUP_DIG, #imageViewer, .insta-controls-native-click-shield, .insta-controls-native-picture-shield";
   const NATIVE_CONTROLS_INTERACTIVE_SELECTOR =
     'a[href], button, input, select, textarea, [role="button"], [role="link"]';
   // Pointer events kept away from Instagram's own player handlers.
@@ -1488,6 +1490,24 @@
       }
     }
 
+    /* Firefox only: catches clicks on the picture, which Firefox would keep
+       for its own controls, and leaves the control bar strip uncovered. */
+    .insta-controls-native-picture-shield {
+      position: absolute !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: 0 !important;
+      background: transparent !important;
+      pointer-events: auto !important;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    .insta-controls-native-picture-shield.is-passing-through {
+      pointer-events: none !important;
+    }
+
     .insta-controls-native-controls-hidden {
       visibility: hidden !important;
       pointer-events: none !important;
@@ -2805,6 +2825,7 @@
       changedPosition: false,
       clickPlaybackTimer: null,
       clickPlaybackToggled: false,
+      pictureShield: null,
       enforcements: [],
       handoffAudioExpiresAt: 0,
       handoffAudioState: null,
@@ -2929,7 +2950,117 @@
       record.clickPlaybackToggled = true;
       toggleHTML5VideoPlayback(video);
     }, NATIVE_CONTROLS_DOUBLE_CLICK_DELAY);
-    showHTML5VideoClickShield(video);
+    if (!record.pictureShield) showHTML5VideoClickShield(video);
+  }
+
+  /**
+   * mountHTML5VideoPictureShield
+   * @description Firefox delivers clicks on a video with native controls only
+   *              to those controls, which turn a double-click into fullscreen.
+   *              Keep a layer of our own over the picture, placed right after
+   *              the video so Instagram's buttons stay above it.
+   *
+   * @param {HTMLVideoElement} video
+   * @param {Object} record
+   * @return {void}
+   */
+  function mountHTML5VideoPictureShield(video, record) {
+    if (!record.pictureShield) {
+      record.pictureShield = createHTML5VideoPictureShield(video, record);
+    }
+
+    const shield = record.pictureShield;
+    if (video.parentNode && shield.previousSibling !== video) {
+      video.after(shield);
+    }
+    positionHTML5VideoPictureShield(video, record);
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @param {Object} record
+   * @return {HTMLDivElement}
+   */
+  function createHTML5VideoPictureShield(video, record) {
+    const shield = document.createElement("div");
+    shield.className = "insta-controls-native-picture-shield";
+    shield.setAttribute("aria-hidden", "true");
+
+    let passThroughTimer = null;
+    const restore = function () {
+      if (passThroughTimer != null) clearTimeout(passThroughTimer);
+      passThroughTimer = null;
+      shield.classList.remove("is-passing-through");
+      window.removeEventListener("contextmenu", restore, true);
+    };
+
+    // Instagram's own handlers sit above the video and would open the post.
+    HTML5_VIDEO_INSTAGRAM_EVENTS.forEach(function (eventName) {
+      shield.addEventListener(eventName, function (event) {
+        event.stopPropagation();
+        if (!record.active || !event.isTrusted) return;
+
+        if (event.type === "mousedown") {
+          if (event.button === 0) {
+            // Keep focus and text selection where they were.
+            event.preventDefault();
+          } else if (event.button === 2) {
+            // Let the right-click reach the video for its own context menu.
+            shield.classList.add("is-passing-through");
+            window.addEventListener("contextmenu", restore, true);
+            passThroughTimer = setTimeout(restore, 3000);
+          }
+        } else if (event.type === "click" && event.button === 0) {
+          event.preventDefault();
+          handleHTML5VideoPictureClick(video, record, event);
+        } else if (event.type === "dblclick" && event.button === 0) {
+          event.preventDefault();
+          likeHTML5VideoPost(video);
+        }
+      });
+    });
+
+    return shield;
+  }
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @param {Object} record
+   * @return {void}
+   */
+  function positionHTML5VideoPictureShield(video, record) {
+    const shield = record.pictureShield;
+    if (!shield?.isConnected) return;
+
+    const videoRect = video.getBoundingClientRect();
+    const height = videoRect.height - NATIVE_CONTROLS_CLEARANCE;
+    if (videoRect.width < 1 || height < 1) {
+      shield.style.display = "none";
+      return;
+    }
+
+    // Measure from the shared containing block, whatever transforms or
+    // padding Instagram's layout applies to it.
+    shield.style.display = "";
+    shield.style.left = "0px";
+    shield.style.top = "0px";
+    shield.style.width = `${videoRect.width}px`;
+    shield.style.height = `${height}px`;
+    const origin = shield.getBoundingClientRect();
+    shield.style.left = `${videoRect.left - origin.left}px`;
+    shield.style.top = `${videoRect.top - origin.top}px`;
+
+    const zIndex = window.getComputedStyle(video).zIndex;
+    shield.style.zIndex = zIndex === "auto" ? "" : zIndex;
+  }
+
+  /**
+   * @param {Object} record
+   * @return {void}
+   */
+  function unmountHTML5VideoPictureShield(record) {
+    record.pictureShield?.remove();
+    record.pictureShield = null;
   }
 
   /**
@@ -3515,6 +3646,7 @@
     }
 
     reassertHTML5VideoControls(video, record);
+    if (IS_FIREFOX) mountHTML5VideoPictureShield(video, record);
     record.audioState = readHTML5VideoAudioState(video);
     record.audioStateUpdatedAt = performance.now();
     scheduleHTML5VideoBlockerRefresh(video);
@@ -3597,6 +3729,7 @@
     record.seekAudioExpiresAt = 0;
 
     releaseHTML5VideoBlockers(video, record);
+    unmountHTML5VideoPictureShield(record);
     video.classList.remove("insta-controls-native-controls");
     video.removeAttribute("data-insta-controls-native-controls");
 
@@ -3698,6 +3831,7 @@
     if (!record.active || !video.isConnected) return;
 
     releaseHTML5VideoBlockers(video, record);
+    if (record.pictureShield) mountHTML5VideoPictureShield(video, record);
     // A clipped carousel slide still reports a box over neighboring page
     // content, such as the comments column; leave that content alone.
     if (!isHTML5VideoRendered(video)) return;
