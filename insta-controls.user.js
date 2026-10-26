@@ -17,7 +17,7 @@
 // @name:zh-CN         insta-controls
 // @name:zh-TW         insta-controls
 // @namespace          https://github.com/dev-ainz/insta-controls/
-// @version            v1.3.4
+// @version            v1.3.5
 // @description        Download photos and videos from Instagram posts in one click, including Stories, Reels, and profile pictures.
 // @description:ar     نزّل صورًا ومقاطع فيديو من منشورات Instagram بنقرة واحدة، بما في ذلك القصص وReels وصور الملف الشخصي.
 // @description:de     Lade Fotos und Videos aus Instagram-Beiträgen mit einem Klick herunter, einschließlich Stories, Reels und Profilbildern.
@@ -101,7 +101,7 @@
     FALLBACK_TO_BLOB_FETCH_IF_MEDIA_API_THROTTLED: false,
     FORCE_FETCH_ALL_RESOURCES: true,
     FORCE_RESOURCE_VIA_MEDIA: true,
-    HTML5_VIDEO_CONTROL: false,
+    HTML5_VIDEO_CONTROL: true,
     MAX_REEL_PLAYBACK_QUALITY: true,
     MODIFY_RESOURCE_EXIF: false,
     MODIFY_VIDEO_VOLUME: false,
