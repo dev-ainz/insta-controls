@@ -17,7 +17,7 @@
 // @name:zh-CN         insta-controls
 // @name:zh-TW         insta-controls
 // @namespace          https://github.com/dev-ainz/insta-controls/
-// @version            v1.4.0
+// @version            v1.4.1
 // @description        Download photos and videos from Instagram posts in one click, including Stories, Reels, and profile pictures.
 // @description:ar     نزّل صورًا ومقاطع فيديو من منشورات Instagram بنقرة واحدة، بما في ذلك القصص وReels وصور الملف الشخصي.
 // @description:de     Lade Fotos und Videos aus Instagram-Beiträgen mit einem Klick herunter, einschließlich Stories, Reels und Profilbildern.
@@ -10718,7 +10718,12 @@
     $form.find(`label[for="${languageId}"]`).text(_i18n("TRANSCRIBE_LANGUAGE"));
     $form.find(".insta-controls-transcript-key-toggle").text(_i18n("TRANSCRIBE_SHOW_KEY"));
 
-    const $input = $form.find(`#${inputId}`).val(savedKey);
+    // The saved key never goes into the page DOM, where Instagram's scripts
+    // could read it. An empty field keeps the saved key.
+    const $input = $form.find(`#${inputId}`);
+    if (savedKey) {
+      $input.attr("placeholder", _i18n("TRANSCRIBE_API_KEY_SAVED"));
+    }
     const $language = $form.find(`#${languageId}`);
     const $error = $form.find(".insta-controls-transcript-form-error");
 
@@ -10768,14 +10773,17 @@
 
     function save() {
       const apiKey = String($input.val() || "").trim();
-      if (!apiKey) {
+      if (!apiKey && !getElevenLabsApiKey()) {
         $input.attr("aria-invalid", "true").trigger("focus");
         $error.text(_i18n("TRANSCRIBE_KEY_REQUIRED"));
         return;
       }
 
-      GM_setValue(ELEVENLABS_API_KEY_STORAGE, apiKey);
+      if (apiKey) {
+        GM_setValue(ELEVENLABS_API_KEY_STORAGE, apiKey);
+      }
       GM_setValue(ELEVENLABS_LANGUAGE_STORAGE, String($language.val() || ""));
+      $input.val("");
       options.onSaved();
     }
 
@@ -14628,6 +14636,7 @@
         TRANSCRIBE_API_KEY: "API key",
         TRANSCRIBE_API_KEY_NOTE:
           "Stored by your userscript manager and sent only to api.elevenlabs.io.",
+        TRANSCRIBE_API_KEY_SAVED: "Key saved. Enter a new key to replace it.",
         TRANSCRIBE_GET_KEY: "Create a key",
         TRANSCRIBE_SHOW_KEY: "Show",
         TRANSCRIBE_HIDE_KEY: "Hide",
@@ -14709,6 +14718,8 @@
         TRANSCRIBE_API_KEY: "Chave de API",
         TRANSCRIBE_API_KEY_NOTE:
           "Armazenada pelo gerenciador de userscripts e enviada apenas para api.elevenlabs.io.",
+        TRANSCRIBE_API_KEY_SAVED:
+          "Chave salva. Informe uma nova chave para substitu\u00ed-la.",
         TRANSCRIBE_GET_KEY: "Criar uma chave",
         TRANSCRIBE_SHOW_KEY: "Mostrar",
         TRANSCRIBE_HIDE_KEY: "Ocultar",

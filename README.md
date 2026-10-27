@@ -1,6 +1,6 @@
 # Insta Loader
 
-**Version 1.4.0** — a standalone Instagram media downloader for Safari on macOS with Tampermonkey.
+**Version 1.4.1** — a standalone Instagram media downloader for Safari on macOS with Tampermonkey.
 
 [`insta-loader.user.js`](./insta-loader.user.js) adds a compact toolbar to visible photos and videos in posts, carousels, Reels, and the current Story. Open the selected file in a new tab, download one item, or save every item in a post. The entire downloader lives in one userscript; using it requires no build step, package installation, or external download service.
 
@@ -56,7 +56,7 @@ Post and Reel videos get a **Transcribe** button (a captions icon) that turns th
 
 The script downloads the video's audio-only stream when Instagram provides one (otherwise the complete video file) and uploads it to ElevenLabs with the `scribe_v2` model. The transcript appears with timestamps, the detected language, and the word count. From there you can copy the text or download it as `.txt` or as `.srt` subtitles. Closing the window cancels a transcription in progress. Results are kept in memory for the session, so reopening a transcript does not upload the video again.
 
-Two optional settings sit under **Show the ElevenLabs Transcribe Button on Videos**: **Label Speakers in Transcripts** and **Include Sounds Such as Laughter in Transcripts**. Right-click that setting to change the API key or language. The key is stored by your userscript manager and is sent only to `api.elevenlabs.io`.
+Two optional settings sit under **Show the ElevenLabs Transcribe Button on Videos**: **Label Speakers in Transcripts** and **Include Sounds Such as Laughter in Transcripts**. Right-click that setting to change the API key or language. The key is stored by your userscript manager, is never written back into the Instagram page, and is sent only to `api.elevenlabs.io`. Leave the key field empty to keep the saved key.
 
 ## Media quality
 
