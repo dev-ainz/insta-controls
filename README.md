@@ -1,6 +1,6 @@
 # Insta Loader
 
-**Version 1.3.15** — a standalone Instagram media downloader for Safari on macOS with Tampermonkey.
+**Version 1.4.0** — a standalone Instagram media downloader for Safari on macOS with Tampermonkey.
 
 [`insta-loader.user.js`](./insta-loader.user.js) adds a compact toolbar to visible photos and videos in posts, carousels, Reels, and the current Story. Open the selected file in a new tab, download one item, or save every item in a post. The entire downloader lives in one userscript; using it requires no build step, package installation, or external download service.
 
@@ -45,6 +45,18 @@ username-POSTCODE-02.mp4
 **Download all** requires sources for every item before it starts. It then checks and sends each file individually. If a later item fails or the action is cancelled, earlier files may already have been sent; the status reports how many. Safari may present multiple save dialogs during a bulk download.
 
 Videos without audio download automatically, including during **Download all**, even if Instagram's metadata says they contain audio. The status reports **no audio track** when the selected file has none. No extra confirmation is required.
+
+## Video transcription
+
+Post and Reel videos get a **Transcribe** button (a captions icon) that turns the video's speech into text with [ElevenLabs Speech to Text](https://elevenlabs.io/speech-to-text). It uses your own ElevenLabs API key, and usage counts toward your ElevenLabs plan.
+
+1. Create an API key in your [ElevenLabs settings](https://elevenlabs.io/app/settings/api-keys). It needs access to Speech to Text.
+2. Click **Transcribe** on a video, or open **ElevenLabs Transcription** from the userscript menu, and paste the key. You can also pick the spoken language there; by default ElevenLabs detects it.
+3. Allow requests to `api.elevenlabs.io` if your userscript manager asks.
+
+The script downloads the video's audio-only stream when Instagram provides one (otherwise the complete video file) and uploads it to ElevenLabs with the `scribe_v2` model. The transcript appears with timestamps, the detected language, and the word count. From there you can copy the text or download it as `.txt` or as `.srt` subtitles. Closing the window cancels a transcription in progress. Results are kept in memory for the session, so reopening a transcript does not upload the video again.
+
+Two optional settings sit under **Show the ElevenLabs Transcribe Button on Videos**: **Label Speakers in Transcripts** and **Include Sounds Such as Laughter in Transcripts**. Right-click that setting to change the API key or language. The key is stored by your userscript manager and is sent only to `api.elevenlabs.io`.
 
 ## Media quality
 

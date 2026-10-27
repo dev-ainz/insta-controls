@@ -17,7 +17,7 @@
 // @name:zh-CN         insta-controls
 // @name:zh-TW         insta-controls
 // @namespace          https://github.com/dev-ainz/insta-controls/
-// @version            v1.3.15
+// @version            v1.4.0
 // @description        Download photos and videos from Instagram posts in one click, including Stories, Reels, and profile pictures.
 // @description:ar     نزّل صورًا ومقاطع فيديو من منشورات Instagram بنقرة واحدة، بما في ذلك القصص وReels وصور الملف الشخصي.
 // @description:de     Lade Fotos und Videos aus Instagram-Beiträgen mit einem Klick herunter, einschließlich Stories, Reels und Profilbildern.
@@ -38,6 +38,7 @@
 // @author             Ainz; based on insta-loader by paytonison and IG Helper by SN-Koarashi (5026)
 // @match              https://*.instagram.com/*
 // @grant              GM_addStyle
+// @grant              GM_deleteValue
 // @grant              GM_download
 // @grant              GM_getResourceText
 // @grant              GM_getValue
@@ -48,6 +49,7 @@
 // @grant              GM_setValue
 // @grant              GM_unregisterMenuCommand
 // @grant              GM_xmlhttpRequest
+// @connect            api.elevenlabs.io
 // @connect            cdn.jsdelivr.net
 // @connect            cdninstagram.com
 // @connect            fbcdn.net
@@ -115,6 +117,9 @@
     SCROLL_BUTTON: false,
     SKIP_VIEW_STORY_CONFIRM: true,
     SKIP_SHARED_WITH_YOU_DIALOG: true,
+    TRANSCRIBE_AUDIO_EVENTS: false,
+    TRANSCRIBE_SPEAKERS: false,
+    TRANSCRIBE_VIDEO: true,
   };
 
   const PARENT_CHILD_MAPPING = {
@@ -124,6 +129,7 @@
       "NEW_TAB_ALWAYS_FORCE_MEDIA_IN_POST",
       "PREFER_DASH_MANIFEST",
     ],
+    TRANSCRIBE_VIDEO: ["TRANSCRIBE_SPEAKERS", "TRANSCRIBE_AUDIO_EVENTS"],
   };
   const IMAGE_CACHE_KEY = "URLS_OF_IMAGES_TEMPORARILY_STORED";
   const IMAGE_CACHE_MAX_AGE = 12 * 60 * 60 * 1000; // 12h in ms
@@ -167,6 +173,34 @@
     "pause",
     "ended",
   ];
+  // ElevenLabs Speech-to-Text. The key and language are stored with GM_setValue
+  // and are only ever sent to the ElevenLabs API host.
+  const ELEVENLABS_STT_ENDPOINT = "https://api.elevenlabs.io/v1/speech-to-text";
+  const ELEVENLABS_STT_MODEL = "scribe_v2";
+  const ELEVENLABS_API_KEYS_URL = "https://elevenlabs.io/app/settings/api-keys";
+  const ELEVENLABS_API_KEY_STORAGE = "G_ELEVENLABS_API_KEY";
+  const ELEVENLABS_LANGUAGE_STORAGE = "G_ELEVENLABS_LANGUAGE";
+  const ELEVENLABS_STT_TIMEOUT = 15 * 60 * 1000;
+  const TRANSCRIPT_CACHE_MAX_ITEMS = 30;
+  // Languages offered in the transcription settings; ElevenLabs detects the
+  // spoken language automatically when none is chosen.
+  const TRANSCRIPT_LANGUAGE_CODES = [
+    "ar", "de", "en", "es", "fr", "hi", "id", "it", "ja", "ko", "nl", "pl",
+    "pt", "ro", "ru", "th", "tr", "uk", "vi", "zh",
+  ];
+  // Segment limits for the transcript list and for SRT subtitle cues.
+  const TRANSCRIPT_DISPLAY_SEGMENT = {
+    maxChars: 320,
+    maxDuration: 30,
+    minSentenceChars: 80,
+    pauseGap: 1.5,
+  };
+  const TRANSCRIPT_SUBTITLE_CUE = {
+    maxChars: 84,
+    maxDuration: 6,
+    minSentenceChars: 24,
+    pauseGap: 1,
+  };
   const NATIVE_CONTROLS_EXCLUDED_SELECTOR =
     ".button_wrapper, .IG_REELS_CONTROLS, .volume_slider, .IG_POPUP_DIG, #imageViewer, .insta-controls-native-click-shield, .insta-controls-native-picture-shield";
   const NATIVE_CONTROLS_INTERACTIVE_SELECTOR =
@@ -215,6 +249,8 @@
       '<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9.25 4.75h-4.5v4.5"/><path d="M14.75 4.75h4.5v4.5"/><path d="M19.25 14.75v4.5h-4.5"/><path d="M9.25 19.25h-4.5v-4.5"/></svg>',
     LIKE_HEART:
       '<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 20.6c-.3 0-.6-.1-.8-.3C6.2 15.9 2.75 12.8 2.75 8.9A4.65 4.65 0 0 1 7.4 4.25c1.86 0 3.5.98 4.6 2.5 1.1-1.52 2.74-2.5 4.6-2.5a4.65 4.65 0 0 1 4.65 4.65c0 3.9-3.45 7-8.45 11.4-.2.2-.5.3-.8.3Z"/></svg>',
+    TRANSCRIBE:
+      '<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3.75" y="5" width="16.5" height="14" rx="2.25"/><path d="M7.25 12.25h3.5"/><path d="M13.25 12.25h3.5"/><path d="M7.25 15.5h6"/><path d="M15.75 15.5h1"/></svg>',
     TURN_DEG:
       '<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7.25 7.5h-3.5V4"/><path d="M4.4 7.1A8 8 0 1 1 4.5 16.75"/></svg>',
   };
@@ -301,6 +337,7 @@
     .IG_COPY_MAIN,
     .IG_NEWTAB_MAIN,
     .IG_THUMBNAIL_MAIN,
+    .IG_TRANSCRIBE_MAIN,
     .IG_DW_ALL_MAIN,
     .IG_IMAGE_VIEWER {
       position: relative;
@@ -326,6 +363,7 @@
     .IG_COPY_MAIN:hover,
     .IG_NEWTAB_MAIN:hover,
     .IG_THUMBNAIL_MAIN:hover,
+    .IG_TRANSCRIBE_MAIN:hover,
     .IG_DW_ALL_MAIN:hover,
     .IG_IMAGE_VIEWER:hover {
       color: #fff;
@@ -337,6 +375,7 @@
     .IG_COPY_MAIN:active,
     .IG_NEWTAB_MAIN:active,
     .IG_THUMBNAIL_MAIN:active,
+    .IG_TRANSCRIBE_MAIN:active,
     .IG_DW_ALL_MAIN:active,
     .IG_IMAGE_VIEWER:active {
       background: var(--insta-controls-surface-pressed);
@@ -370,6 +409,7 @@
     .IG_COPY_MAIN svg,
     .IG_NEWTAB_MAIN svg,
     .IG_THUMBNAIL_MAIN svg,
+    .IG_TRANSCRIBE_MAIN svg,
     .IG_DW_ALL_MAIN svg,
     .IG_IMAGE_VIEWER svg {
       display: block;
@@ -415,6 +455,7 @@
     .IG_REELS,
     .IG_REELS_NEWTAB,
     .IG_REELS_THUMBNAIL,
+    .IG_REELS_TRANSCRIBE,
     .IG_DWSTORY,
     .IG_DWSTORY_ALL,
     .IG_DWNEWTAB,
@@ -442,6 +483,7 @@
     .IG_REELS:hover,
     .IG_REELS_NEWTAB:hover,
     .IG_REELS_THUMBNAIL:hover,
+    .IG_REELS_TRANSCRIBE:hover,
     .IG_DWSTORY:hover,
     .IG_DWSTORY_ALL:hover,
     .IG_DWNEWTAB:hover,
@@ -459,6 +501,7 @@
     .IG_REELS:active,
     .IG_REELS_NEWTAB:active,
     .IG_REELS_THUMBNAIL:active,
+    .IG_REELS_TRANSCRIBE:active,
     .IG_DWSTORY:active,
     .IG_DWSTORY_ALL:active,
     .IG_DWNEWTAB:active,
@@ -474,6 +517,7 @@
     .IG_REELS svg,
     .IG_REELS_NEWTAB svg,
     .IG_REELS_THUMBNAIL svg,
+    .IG_REELS_TRANSCRIBE svg,
     .IG_DWSTORY svg,
     .IG_DWSTORY_ALL svg,
     .IG_DWNEWTAB svg,
@@ -506,7 +550,8 @@
 
     .IG_REELS_CONTROLS > .IG_REELS,
     .IG_REELS_CONTROLS > .IG_REELS_NEWTAB,
-    .IG_REELS_CONTROLS > .IG_REELS_THUMBNAIL {
+    .IG_REELS_CONTROLS > .IG_REELS_THUMBNAIL,
+    .IG_REELS_CONTROLS > .IG_REELS_TRANSCRIBE {
       position: static;
       top: auto;
       right: auto;
@@ -1146,6 +1191,348 @@
       text-decoration: none;
     }
 
+    .IG_POPUP_DIG_TRANSCRIPT .IG_POPUP_DIG_MAIN {
+      width: min(640px, calc(100vw - 32px));
+    }
+
+    .IG_POPUP_DIG_TRANSCRIPT .IG_POPUP_DIG_BODY {
+      min-height: 140px;
+      padding: 6px 18px 14px;
+    }
+
+    .IG_POPUP_DIG_BODY > .insta-controls-transcript {
+      position: static;
+      margin: 0;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+    }
+
+    .IG_POPUP_DIG_BODY > .insta-controls-transcript:hover {
+      background: transparent;
+    }
+
+    .insta-controls-transcript-meta {
+      position: sticky;
+      top: -6px;
+      z-index: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 0 -18px;
+      padding: 10px 18px;
+      background: linear-gradient(180deg, rgba(24, 24, 27, 0.99) 70%, rgba(24, 24, 27, 0));
+    }
+
+    .insta-controls-transcript-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 0 9px;
+      color: var(--insta-controls-secondary-text);
+      background: var(--insta-controls-surface);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      font-size: 11.5px;
+      font-weight: 550;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .insta-controls-transcript-segments {
+      margin: 0;
+      padding: 4px 0 0;
+      list-style: none;
+    }
+
+    .insta-controls-transcript-segment {
+      display: grid;
+      grid-template-columns: 58px minmax(0, 1fr);
+      gap: 14px;
+      margin: 0 -10px;
+      padding: 9px 10px;
+      border-radius: var(--insta-controls-radius-small);
+      transition: background 150ms ease;
+    }
+
+    .insta-controls-transcript-segment:hover {
+      background: rgba(255, 255, 255, 0.045);
+    }
+
+    .insta-controls-transcript-time {
+      padding-top: 3px;
+      color: var(--insta-controls-accent-hover);
+      border-right: 1px solid rgba(10, 132, 255, 0.28);
+      font: 500 11.5px/18px ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.2px;
+      opacity: 0.86;
+      user-select: none;
+    }
+
+    .insta-controls-transcript-speaker {
+      display: block;
+      margin-bottom: 2px;
+      color: var(--insta-controls-tertiary-text);
+      font-size: 10.5px;
+      font-weight: 650;
+      line-height: 16px;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+    }
+
+    .insta-controls-transcript-text {
+      margin: 0;
+      color: var(--insta-controls-text);
+      font-size: 14.5px;
+      line-height: 1.6;
+      letter-spacing: -0.1px;
+      overflow-wrap: anywhere;
+      user-select: text;
+    }
+
+    .insta-controls-transcript-empty,
+    .insta-controls-transcript-status {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 150px;
+      padding: 18px 8px;
+      text-align: center;
+    }
+
+    .insta-controls-transcript-empty {
+      color: var(--insta-controls-secondary-text);
+      font-size: 13px;
+    }
+
+    .insta-controls-transcript-steps {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      text-align: left;
+    }
+
+    .insta-controls-transcript-step {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      color: var(--insta-controls-tertiary-text);
+      font-size: 13.5px;
+      font-weight: 500;
+      line-height: 20px;
+      transition: color 200ms ease;
+    }
+
+    .insta-controls-transcript-step::before {
+      flex: 0 0 auto;
+      width: 14px;
+      height: 14px;
+      box-sizing: border-box;
+      content: "";
+      border: 1.5px solid rgba(255, 255, 255, 0.22);
+      border-radius: 50%;
+    }
+
+    .insta-controls-transcript-step.is-active {
+      color: var(--insta-controls-text);
+    }
+
+    .insta-controls-transcript-step.is-active::before {
+      border-color: rgba(255, 255, 255, 0.2);
+      border-top-color: var(--insta-controls-accent-hover);
+      animation: insta-controls-spin 700ms linear infinite;
+    }
+
+    .insta-controls-transcript-step.is-done {
+      color: var(--insta-controls-secondary-text);
+    }
+
+    .insta-controls-transcript-step.is-done::before {
+      background: var(--insta-controls-accent) center / 10px 10px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.25 4.25L19 7'/%3E%3C/svg%3E");
+      border-color: transparent;
+    }
+
+    .insta-controls-transcript-hint {
+      max-width: 380px;
+      margin: 18px 0 0;
+      color: var(--insta-controls-tertiary-text);
+      font-size: 12px;
+      line-height: 17px;
+    }
+
+    .insta-controls-transcript-error-title {
+      margin: 0;
+      color: var(--insta-controls-text);
+      font-size: 15px;
+      font-weight: 650;
+      line-height: 20px;
+    }
+
+    .insta-controls-transcript-error-detail {
+      max-width: 440px;
+      margin: 6px 0 0;
+      color: var(--insta-controls-secondary-text);
+      font-size: 13px;
+      line-height: 19px;
+      overflow-wrap: anywhere;
+    }
+
+    .insta-controls-transcript-setup {
+      display: grid;
+      gap: 16px;
+      padding: 10px 0 4px;
+    }
+
+    .insta-controls-transcript-setup-intro {
+      margin: 0;
+      color: var(--insta-controls-secondary-text);
+      font-size: 13px;
+      line-height: 19px;
+    }
+
+    .insta-controls-transcript-field {
+      display: grid;
+      gap: 7px;
+    }
+
+    .insta-controls-transcript-field > label {
+      color: var(--insta-controls-text);
+      font-size: 12.5px;
+      font-weight: 600;
+      line-height: 16px;
+    }
+
+    .insta-controls-transcript-key-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .IG_POPUP_DIG .insta-controls-transcript-input,
+    .IG_POPUP_DIG .insta-controls-transcript-setup select {
+      flex: 1 1 auto;
+      width: 100%;
+      min-width: 0;
+      min-height: 36px;
+      padding: 0 11px;
+      box-sizing: border-box;
+      color: var(--insta-controls-text);
+      background: rgba(255, 255, 255, 0.065);
+      border: 1px solid var(--insta-controls-separator);
+      border-radius: var(--insta-controls-radius-small);
+      outline: none;
+      font-size: 13px;
+    }
+
+    .IG_POPUP_DIG .insta-controls-transcript-input {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: 0.2px;
+    }
+
+    .IG_POPUP_DIG .insta-controls-transcript-input[aria-invalid="true"] {
+      border-color: rgba(255, 69, 58, 0.7);
+    }
+
+    .IG_POPUP_DIG .insta-controls-transcript-key-row button {
+      flex: 0 0 auto;
+      min-width: 64px;
+    }
+
+    .insta-controls-transcript-note {
+      margin: 0;
+      color: var(--insta-controls-tertiary-text);
+      font-size: 11.5px;
+      line-height: 16px;
+    }
+
+    .IG_POPUP_DIG_BODY a.insta-controls-transcript-link {
+      display: inline;
+      padding: 0;
+      color: var(--insta-controls-accent-hover);
+      font-size: inherit;
+      text-decoration: none;
+      opacity: 1;
+    }
+
+    .IG_POPUP_DIG_BODY a.insta-controls-transcript-link:hover {
+      text-decoration: underline;
+    }
+
+    .insta-controls-transcript-form-error {
+      margin: 0;
+      color: var(--insta-controls-danger);
+      font-size: 12px;
+      line-height: 17px;
+    }
+
+    .insta-controls-transcript-form-error:empty {
+      display: none;
+    }
+
+    .insta-controls-transcript-footer {
+      display: flex;
+      flex: 0 0 auto;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 12px 18px 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .insta-controls-transcript-footer:empty {
+      display: none;
+    }
+
+    .IG_POPUP_DIG .insta-controls-transcript-footer .is-leading {
+      margin-right: auto;
+      color: var(--insta-controls-secondary-text);
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+    }
+
+    .IG_POPUP_DIG .insta-controls-transcript-footer .is-leading:hover {
+      color: var(--insta-controls-text);
+      background: var(--insta-controls-surface);
+    }
+
+    .IG_POPUP_DIG .insta-controls-transcript-footer .is-primary {
+      color: #fff;
+      background: var(--insta-controls-accent);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .IG_POPUP_DIG .insta-controls-transcript-footer .is-primary:hover {
+      background: var(--insta-controls-accent-hover);
+    }
+
+    @media (max-width: 520px) {
+      .insta-controls-transcript-segment {
+        grid-template-columns: 46px minmax(0, 1fr);
+        gap: 10px;
+      }
+
+      .insta-controls-transcript-footer button {
+        flex: 1 1 auto;
+      }
+
+      .IG_POPUP_DIG .insta-controls-transcript-footer .is-leading {
+        flex-basis: 100%;
+        margin-right: 0;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .insta-controls-transcript-step.is-active::before {
+        animation-duration: 2.4s;
+      }
+    }
+
     #scrollWrapper {
       z-index: 20;
     }
@@ -1616,6 +2003,10 @@
       link: null,
       pending: null,
       userInputAt: -Infinity,
+    },
+    GL_transcription: {
+      activeJob: null,
+      cache: new Map(),
     },
     GL_weakCache: {
       overlay: new WeakMap(),
@@ -4932,6 +5323,7 @@
           const NewTabElement = `<div data-ih-locale-title="NEW_TAB" title="${_i18n("NEW_TAB")}" class="IG_NEWTAB_MAIN">${SVG.NEW_TAB}</div>`;
           const ThumbnailElement = `<div data-ih-locale-title="VIDEO_THUMBNAIL" title="${_i18n("VIDEO_THUMBNAIL")}" class="IG_THUMBNAIL_MAIN">${SVG.THUMBNAIL}</div>`;
           const ViewerElement = `<div data-ih-locale-title="IMAGE_VIEWER" title="${_i18n("IMAGE_VIEWER")}" class="IG_IMAGE_VIEWER">${SVG.FULLSCREEN}</div>`;
+          const TranscribeElement = `<div data-ih-locale-title="TRANSCRIBE" title="${_i18n("TRANSCRIBE")}" class="IG_TRANSCRIBE_MAIN">${SVG.TRANSCRIBE}</div>`;
 
           $childElement.find(".button_wrapper").append(DownloadElement);
           $childElement.find(".button_wrapper").append(CopyElement);
@@ -4980,6 +5372,7 @@
                 if (entry.isIntersecting) {
                   var $targetNode = $(entry.target);
                   $childElement.find(".IG_THUMBNAIL_MAIN")?.remove();
+                  $childElement.find(".IG_TRANSCRIBE_MAIN")?.remove();
                   $childElement.find(".IG_IMAGE_VIEWER")?.remove();
 
                   // Check if video?
@@ -4988,6 +5381,12 @@
                       $childElement
                         .find(".button_wrapper")
                         .append(ThumbnailElement);
+                    }
+
+                    if (USER_SETTING.TRANSCRIBE_VIDEO) {
+                      $childElement
+                        .find(".button_wrapper")
+                        .append(TranscribeElement);
                     }
 
                     initPostVideoFunction($mainElement);
@@ -5088,6 +5487,7 @@
             element: this,
             trigger: [
               ".IG_THUMBNAIL_MAIN",
+              ".IG_TRANSCRIBE_MAIN",
               ".IG_NEWTAB_MAIN",
               ".IG_DW_ALL_MAIN",
               ".IG_COPY_MAIN",
@@ -5300,6 +5700,32 @@
               updateLoadingBar(false);
               removeMediaDialog();
             }
+          });
+
+          // Running if user clicks the transcribe icon
+          $(this).on("click", ".IG_TRANSCRIBE_MAIN", function (e) {
+            consumeInjectedClick(e);
+            if (state.bulkDownloadActive) return;
+
+            const $transcribeButton = $(this);
+            const postPath = getPostPathForMediaAction($mainElement);
+            const index = getVisibleNodeIndex(
+              $transcribeButton.parent().parent().parent(),
+            );
+
+            openTranscriptionDialog({
+              resolveSource: async () => {
+                if (!postPath) {
+                  throw createTranscriptionError("TRANSCRIBE_ERROR_NO_SOURCE");
+                }
+
+                const source = await resolvePostMediaSource(postPath, index);
+                if (!source.isVideo) {
+                  throw createTranscriptionError("TRANSCRIBE_ERROR_NOT_VIDEO");
+                }
+                return source;
+              },
+            });
           });
 
           // Running if user clicks the copy-media icon. Clipboard.write() must be
@@ -5980,7 +6406,7 @@
       : "image";
   }
 
-  async function resolvePostMediaForClipboard(postPath, index) {
+  async function resolvePostMediaSource(postPath, index) {
     const $scratch = $("<div>");
 
     try {
@@ -6009,6 +6435,9 @@
         url,
         thumbnailUrl: $linkElement.find("img").first().attr("src") || null,
         isVideo: mediaName === "video" || mediaType === "mp4",
+        mediaId: String($linkElement.attr("media-id") || ""),
+        username: String($linkElement.attr("data-username") || ""),
+        shortcode: String($linkElement.attr("data-path") || postPath),
       };
     } finally {
       $scratch.remove();
@@ -6127,7 +6556,7 @@
       throw new Error("Clipboard media writing is not supported.");
     }
 
-    const sourcePromise = resolvePostMediaForClipboard(postPath, index);
+    const sourcePromise = resolvePostMediaSource(postPath, index);
 
     if (
       mediaKind === "video" &&
@@ -6233,7 +6662,7 @@
   }
 
   const INJECTED_ACTION_SELECTOR =
-    ".newTab, .videoThumbnail, .IG_IMAGE_VIEWER, .IG_NEWTAB_MAIN, .IG_DW_ALL_MAIN, .IG_COPY_MAIN";
+    ".newTab, .videoThumbnail, .IG_IMAGE_VIEWER, .IG_NEWTAB_MAIN, .IG_DW_ALL_MAIN, .IG_COPY_MAIN, .IG_TRANSCRIBE_MAIN";
 
   function clickStartedOnInjectedAction(e) {
     return e?.target?.closest?.(INJECTED_ACTION_SELECTOR) != null;
@@ -8276,17 +8705,27 @@
    * @param  {Boolean}  isPreview - Check if it is need to open new tab
    * @return {void}
    */
+  /**
+   * getCurrentReelsShortcode
+   * @description Shortcode of the Reel open on the Reels page.
+   *
+   * @return {String}
+   */
+  function getCurrentReelsShortcode() {
+    return location.href
+      .split("?")
+      .at(0)
+      .split("instagram.com/reels/")
+      .at(-1)
+      .replaceAll("/", "");
+  }
+
   async function onReels(isDownload, isVideo, isPreview) {
     try {
       if (isDownload) {
         updateLoadingBar(true);
 
-        let reelsPath = location.href
-          .split("?")
-          .at(0)
-          .split("instagram.com/reels/")
-          .at(-1)
-          .replaceAll("/", "");
+        let reelsPath = getCurrentReelsShortcode();
         let result = await getBlobMedia(reelsPath);
         let media = filterResourceData(result.data);
 
@@ -8512,6 +8951,14 @@
           <div data-ih-locale-title="VIDEO_THUMBNAIL" title="${_i18n("VIDEO_THUMBNAIL")}" class="IG_REELS_THUMBNAIL">${SVG.THUMBNAIL}</div>
         </div>`,
       );
+
+      if (USER_SETTING.TRANSCRIBE_VIDEO) {
+        $actionRail
+          .find(".IG_REELS_CONTROLS")
+          .append(
+            `<div data-ih-locale-title="TRANSCRIBE" title="${_i18n("TRANSCRIBE")}" class="IG_REELS_TRANSCRIBE">${SVG.TRANSCRIBE}</div>`,
+          );
+      }
 
       $main.find("video").each(function () {
         $(this)
@@ -9583,6 +10030,1142 @@
               `<div data-ih-locale-title="VIDEO_THUMBNAIL" title="${_i18n("VIDEO_THUMBNAIL")}" class="IG_DWSTORY_THUMBNAIL">${SVG.THUMBNAIL}</div>`,
             );
         }
+      }
+    }
+  }
+
+  /* ElevenLabs transcription */
+
+  /**
+   * createTranscriptionError
+   * @description Create an error whose message is an i18n key shown to the user.
+   *
+   * @param  {String}  messageKey
+   * @param  {Object}  details
+   * @return {Error}
+   */
+  function createTranscriptionError(messageKey, details = {}) {
+    const error = new Error(messageKey);
+    error.messageKey = messageKey;
+    Object.assign(error, details);
+    return error;
+  }
+
+  /** @return {String} */
+  function getElevenLabsApiKey() {
+    const value = GM_getValue(ELEVENLABS_API_KEY_STORAGE, "");
+    return typeof value === "string" ? value.trim() : "";
+  }
+
+  /** @return {String} */
+  function getTranscriptionLanguage() {
+    const value = GM_getValue(ELEVENLABS_LANGUAGE_STORAGE, "");
+    return TRANSCRIPT_LANGUAGE_CODES.includes(value) ? value : "";
+  }
+
+  /** @return {Object} */
+  function getTranscriptionOptions() {
+    return {
+      apiKey: getElevenLabsApiKey(),
+      languageCode: getTranscriptionLanguage(),
+      diarize: USER_SETTING.TRANSCRIBE_SPEAKERS === true,
+      tagAudioEvents: USER_SETTING.TRANSCRIBE_AUDIO_EVENTS === true,
+    };
+  }
+
+  /**
+   * getLanguageDisplayName
+   * @description Name a language code in the interface language.
+   *
+   * @param  {String}  code - ISO 639-1 or ISO 639-3 code
+   * @return {String}
+   */
+  function getLanguageDisplayName(code) {
+    if (!code) return "";
+
+    try {
+      const displayNames = new Intl.DisplayNames([state.lang, "en"], {
+        type: "language",
+      });
+      const name = displayNames.of(code);
+      if (name && name.toLowerCase() !== code.toLowerCase()) {
+        return name.charAt(0).toLocaleUpperCase(state.lang) + name.slice(1);
+      }
+    } catch (_err) {
+      // Unknown or malformed codes fall back to the raw code below.
+    }
+
+    return code.toUpperCase();
+  }
+
+  /**
+   * resolveReelVideoSource
+   * @description Resolve the video file of the Reel open on the Reels page.
+   *
+   * @param  {String}  shortcode
+   * @return {Promise<Object>}
+   */
+  async function resolveReelVideoSource(shortcode) {
+    if (!shortcode) {
+      throw createTranscriptionError("TRANSCRIBE_ERROR_NO_SOURCE");
+    }
+
+    const result = await getBlobMedia(shortcode);
+    const media = filterResourceData(result.data);
+    const isGraphQL = result.type === "query_hash";
+    const url = isGraphQL
+      ? media.is_video
+        ? media.video_url
+        : null
+      : media.video_versions?.[0]?.url;
+
+    if (!url) {
+      throw createTranscriptionError("TRANSCRIBE_ERROR_NOT_VIDEO");
+    }
+
+    const mediaId = String((isGraphQL ? media.id : media.pk) ?? "");
+    if (mediaId && media.video_dash_manifest) {
+      state.GL_mediaDataCache[mediaId] = media;
+    }
+
+    return {
+      url,
+      mediaId,
+      username: media.owner?.username || "",
+      shortcode,
+      isVideo: true,
+    };
+  }
+
+  /**
+   * fetchTranscriptionAudio
+   * @description Download the smallest usable file for transcription: the DASH
+   *              audio-only stream when Instagram provides one, otherwise the
+   *              complete video file.
+   *
+   * @param  {Object}  source
+   * @return {Promise<{blob: Blob, filename: String}>}
+   */
+  async function fetchTranscriptionAudio(source) {
+    const candidates = [];
+    const manifest = state.GL_mediaDataCache[source.mediaId]?.video_dash_manifest;
+    const audioURL = manifest ? parseDashManifest(manifest).audio?.url : null;
+
+    if (audioURL) {
+      candidates.push({ url: audioURL, extension: "m4a" });
+    }
+    candidates.push({ url: source.url, extension: "mp4" });
+
+    let lastError = null;
+    for (const candidate of candidates) {
+      try {
+        const blob = await fetchMediaBlob(candidate.url);
+        if (blob?.size > 0) {
+          return {
+            blob,
+            filename: `${getTranscriptFileBaseName(source)}.${candidate.extension}`,
+          };
+        }
+        lastError = new Error("Empty media response.");
+      } catch (err) {
+        lastError = err;
+        logger(
+          "fetchTranscriptionAudio()",
+          `${candidate.extension} source failed`,
+          err?.message || err,
+        );
+      }
+    }
+
+    throw createTranscriptionError("TRANSCRIBE_ERROR_AUDIO", {
+      cause: lastError,
+    });
+  }
+
+  /**
+   * getElevenLabsErrorDetail
+   * @description Extract the human-readable message from an ElevenLabs error body.
+   *
+   * @param  {String}  responseText
+   * @return {String}
+   */
+  function getElevenLabsErrorDetail(responseText) {
+    try {
+      const body = JSON.parse(responseText);
+      const detail = body?.detail ?? body;
+
+      if (typeof detail === "string") return detail;
+      if (Array.isArray(detail)) {
+        return detail
+          .map((item) => item?.msg)
+          .filter(Boolean)
+          .join(" ");
+      }
+      return detail?.message || detail?.status || "";
+    } catch (_err) {
+      return "";
+    }
+  }
+
+  /**
+   * requestElevenLabsTranscription
+   * @description Upload media to ElevenLabs Speech-to-Text and return its result.
+   *              The request is aborted when the job is cancelled.
+   *
+   * @param  {Blob}    blob
+   * @param  {String}  filename
+   * @param  {Object}  options
+   * @param  {Object}  job
+   * @return {Promise<Object>}
+   */
+  function requestElevenLabsTranscription(blob, filename, options, job) {
+    return new Promise((resolve, reject) => {
+      const form = new FormData();
+      form.append("model_id", ELEVENLABS_STT_MODEL);
+      form.append("file", blob, filename);
+      form.append("timestamps_granularity", "word");
+      form.append("diarize", String(options.diarize));
+      form.append("tag_audio_events", String(options.tagAudioEvents));
+      if (options.languageCode) {
+        form.append("language_code", options.languageCode);
+      }
+
+      const request = GM_xmlhttpRequest({
+        method: "POST",
+        url: ELEVENLABS_STT_ENDPOINT,
+        headers: {
+          Accept: "application/json",
+          "xi-api-key": options.apiKey,
+        },
+        data: form,
+        anonymous: true,
+        timeout: ELEVENLABS_STT_TIMEOUT,
+        onload: function (response) {
+          job.abortRequest = null;
+          const status = response.status;
+          const responseText = response.responseText || "";
+
+          if (status >= 200 && status < 300) {
+            try {
+              const result = JSON.parse(responseText);
+              const transcript = Array.isArray(result?.transcripts)
+                ? result.transcripts[0]
+                : result;
+
+              if (typeof transcript?.text !== "string") {
+                throw new Error("Missing transcript text.");
+              }
+              resolve(transcript);
+            } catch (err) {
+              reject(
+                createTranscriptionError("TRANSCRIBE_ERROR_RESPONSE", {
+                  cause: err,
+                }),
+              );
+            }
+            return;
+          }
+
+          const detail = getElevenLabsErrorDetail(responseText);
+          let messageKey = "TRANSCRIBE_ERROR_API";
+          if (status === 401 && !/quota|credit/i.test(detail)) {
+            messageKey = "TRANSCRIBE_ERROR_INVALID_KEY";
+          } else if (status === 429) {
+            messageKey = "TRANSCRIBE_ERROR_RATE_LIMIT";
+          }
+
+          reject(createTranscriptionError(messageKey, { status, detail }));
+        },
+        onerror: function (err) {
+          job.abortRequest = null;
+          reject(
+            createTranscriptionError("TRANSCRIBE_ERROR_NETWORK", {
+              cause: err,
+            }),
+          );
+        },
+        ontimeout: function () {
+          job.abortRequest = null;
+          reject(createTranscriptionError("TRANSCRIBE_ERROR_TIMEOUT"));
+        },
+        onabort: function () {
+          job.abortRequest = null;
+          reject(createTranscriptionError("TRANSCRIBE_CANCELLED"));
+        },
+      });
+
+      job.abortRequest = () => request?.abort?.();
+    });
+  }
+
+  /**
+   * buildTranscriptSegments
+   * @description Group ElevenLabs word timings into readable segments. A new
+   *              segment starts at a speaker change, a long pause, a sentence
+   *              end once the segment is long enough, or a length limit.
+   *
+   * @param  {Object}  transcript
+   * @param  {Object}  limits
+   * @return {Array<{start: Number, end: Number, speaker: String|null, text: String}>}
+   */
+  function buildTranscriptSegments(transcript, limits) {
+    const words = Array.isArray(transcript?.words) ? transcript.words : [];
+    const segments = [];
+    let current = null;
+
+    const flush = function () {
+      if (current) {
+        current.text = current.text.replace(/\s+/g, " ").trim();
+        if (current.text) {
+          segments.push({
+            start: current.start,
+            end: Math.max(current.end, current.start),
+            speaker: current.speaker,
+            text: current.text,
+          });
+        }
+      }
+      current = null;
+    };
+
+    for (const word of words) {
+      if (!word || typeof word.text !== "string") continue;
+
+      if (word.type === "spacing") {
+        if (current) current.text += word.text;
+        continue;
+      }
+
+      const start = Number.isFinite(word.start)
+        ? word.start
+        : (current?.end ?? 0);
+      const end = Number.isFinite(word.end) ? word.end : start;
+      const speaker = word.speaker_id || null;
+
+      if (
+        current &&
+        (speaker !== current.speaker ||
+          start - current.end > limits.pauseGap ||
+          end - current.start > limits.maxDuration ||
+          current.text.length + word.text.length > limits.maxChars ||
+          (current.endsSentence &&
+            current.text.trim().length >= limits.minSentenceChars))
+      ) {
+        flush();
+      }
+
+      if (!current) {
+        current = { start, end, speaker, text: "", endsSentence: false };
+      } else if (word.type === "audio_event" && !/\s$/.test(current.text)) {
+        current.text += " ";
+      }
+
+      current.text += word.text;
+      current.end = Math.max(current.end, end);
+      current.endsSentence = /[.!?\u2026\u3002\uff01\uff1f]["')\]]*$/.test(
+        word.text,
+      );
+    }
+    flush();
+
+    if (segments.length === 0 && transcript?.text?.trim()) {
+      segments.push({
+        start: 0,
+        end: Number(transcript.audio_duration_secs) || 0,
+        speaker: null,
+        text: transcript.text.trim(),
+      });
+    }
+
+    return segments;
+  }
+
+  /**
+   * getTranscriptSpeakerLabels
+   * @description Number speakers in order of appearance. Returns an empty map
+   *              when fewer than two speakers were identified.
+   *
+   * @param  {Array}  segments
+   * @return {Map<String, String>}
+   */
+  function getTranscriptSpeakerLabels(segments) {
+    const labels = new Map();
+    segments.forEach((segment) => {
+      if (segment.speaker && !labels.has(segment.speaker)) {
+        labels.set(
+          segment.speaker,
+          _i18n("TRANSCRIBE_SPEAKER").replace("%NUMBER%", labels.size + 1),
+        );
+      }
+    });
+    return labels.size > 1 ? labels : new Map();
+  }
+
+  /**
+   * formatTranscriptTime
+   * @description Format seconds as m:ss, or h:mm:ss for long media.
+   *
+   * @param  {Number}  seconds
+   * @return {String}
+   */
+  function formatTranscriptTime(seconds) {
+    const total = Math.max(0, Math.floor(Number(seconds) || 0));
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const secs = String(total % 60).padStart(2, "0");
+
+    return hours > 0
+      ? `${hours}:${String(minutes).padStart(2, "0")}:${secs}`
+      : `${minutes}:${secs}`;
+  }
+
+  /**
+   * formatSubtitleTime
+   * @description Format seconds as an SRT timestamp (HH:MM:SS,mmm).
+   *
+   * @param  {Number}  seconds
+   * @return {String}
+   */
+  function formatSubtitleTime(seconds) {
+    const totalMs = Math.max(0, Math.round((Number(seconds) || 0) * 1000));
+    const hours = Math.floor(totalMs / 3600000);
+    const minutes = Math.floor((totalMs % 3600000) / 60000);
+    const secs = Math.floor((totalMs % 60000) / 1000);
+    const ms = totalMs % 1000;
+
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")},${String(ms).padStart(3, "0")}`;
+  }
+
+  /**
+   * buildTranscriptPlainText
+   * @description Plain-text transcript; speaker turns are labeled when known.
+   *
+   * @param  {Object}  transcript
+   * @return {String}
+   */
+  function buildTranscriptPlainText(transcript) {
+    const segments = buildTranscriptSegments(
+      transcript,
+      TRANSCRIPT_DISPLAY_SEGMENT,
+    );
+    const speakers = getTranscriptSpeakerLabels(segments);
+
+    if (speakers.size === 0) {
+      return transcript.text.trim();
+    }
+
+    const turns = [];
+    segments.forEach((segment) => {
+      const label = speakers.get(segment.speaker) || "";
+      const lastTurn = turns.at(-1);
+      if (lastTurn && lastTurn.label === label) {
+        lastTurn.text += ` ${segment.text}`;
+      } else {
+        turns.push({ label, text: segment.text });
+      }
+    });
+
+    return turns
+      .map((turn) => (turn.label ? `${turn.label}: ${turn.text}` : turn.text))
+      .join("\n\n");
+  }
+
+  /**
+   * buildTranscriptSubtitles
+   * @description SubRip (SRT) subtitles from word timings.
+   *
+   * @param  {Object}  transcript
+   * @return {String}
+   */
+  function buildTranscriptSubtitles(transcript) {
+    const cues = buildTranscriptSegments(transcript, TRANSCRIPT_SUBTITLE_CUE);
+    const speakers = getTranscriptSpeakerLabels(cues);
+
+    return cues
+      .map((cue, index) => {
+        const nextStart = cues[index + 1]?.start;
+        let end = Math.max(cue.end, cue.start + 0.5);
+        if (Number.isFinite(nextStart) && nextStart > cue.start) {
+          end = Math.min(end, nextStart);
+        }
+
+        const label = speakers.get(cue.speaker);
+        const text = label ? `[${label}] ${cue.text}` : cue.text;
+        return `${index + 1}\n${formatSubtitleTime(cue.start)} --> ${formatSubtitleTime(end)}\n${text}\n`;
+      })
+      .join("\n");
+  }
+
+  /**
+   * getTranscriptFileBaseName
+   * @description File name stem shared by uploaded audio and saved transcripts.
+   *
+   * @param  {Object}  source
+   * @return {String}
+   */
+  function getTranscriptFileBaseName(source) {
+    return [source?.username, source?.shortcode || source?.mediaId]
+      .filter(Boolean)
+      .join("-")
+      .replace(/[^\w.-]+/g, "_") || "instagram-video";
+  }
+
+  /**
+   * cacheTranscript
+   * @description Keep recent transcripts in memory so reopening one does not
+   *              upload the media to ElevenLabs again.
+   *
+   * @param  {String}  key
+   * @param  {Object}  transcript
+   * @return {void}
+   */
+  function cacheTranscript(key, transcript) {
+    const cache = state.GL_transcription.cache;
+    cache.delete(key);
+    cache.set(key, transcript);
+
+    while (cache.size > TRANSCRIPT_CACHE_MAX_ITEMS) {
+      cache.delete(cache.keys().next().value);
+    }
+  }
+
+  /**
+   * cancelActiveTranscription
+   * @description Stop the running transcription job, if any.
+   *
+   * @return {void}
+   */
+  function cancelActiveTranscription() {
+    const job = state.GL_transcription.activeJob;
+    if (!job) return;
+
+    job.cancelled = true;
+    job.abortRequest?.();
+    job.dialogObserver?.disconnect();
+    state.GL_transcription.activeJob = null;
+  }
+
+  /**
+   * assertTranscriptionJob
+   * @description Throw when the job was cancelled or its dialog was closed.
+   *
+   * @param  {Object}  job
+   * @return {void}
+   */
+  function assertTranscriptionJob(job) {
+    if (
+      job.cancelled ||
+      state.GL_transcription.activeJob !== job ||
+      !job.$dialog.get(0)?.isConnected
+    ) {
+      throw createTranscriptionError("TRANSCRIBE_CANCELLED");
+    }
+  }
+
+  /**
+   * openTranscriptionDialog
+   * @description Open the transcript dialog for a video. Asks for the
+   *              ElevenLabs API key first when none is saved.
+   *
+   * @param  {Object}    request
+   * @param  {Function}  request.resolveSource - resolves {url, mediaId, username, shortcode}
+   * @return {void}
+   */
+  function openTranscriptionDialog(request) {
+    cancelActiveTranscription();
+    $(".IG_POPUP_DIG").remove();
+    IG_createDM();
+
+    const $dialog = $(".IG_POPUP_DIG").last();
+    $dialog.addClass("IG_POPUP_DIG_TRANSCRIPT");
+    $dialog
+      .find(".IG_POPUP_DIG_MAIN")
+      .append('<div class="insta-controls-transcript-footer"></div>');
+    setTranscriptDialogSubtitle($dialog, null);
+
+    if (!getElevenLabsApiKey()) {
+      renderTranscriptionSetup($dialog, {
+        onSaved: () => runTranscription($dialog, request),
+        submitKey: "TRANSCRIBE_SAVE_AND_RUN",
+      });
+      return;
+    }
+
+    runTranscription($dialog, request);
+  }
+
+  /**
+   * showTranscriptionSetting
+   * @description Show the ElevenLabs API key and language settings.
+   *
+   * @return {void}
+   */
+  function showTranscriptionSetting() {
+    cancelActiveTranscription();
+    $(".IG_POPUP_DIG").remove();
+    IG_createDM();
+
+    const $dialog = $(".IG_POPUP_DIG").last();
+    $dialog.addClass("IG_POPUP_DIG_TRANSCRIPT");
+    $dialog
+      .find(".IG_POPUP_DIG_MAIN")
+      .append('<div class="insta-controls-transcript-footer"></div>');
+    $dialog.find("#post_info").text(_i18n("TRANSCRIBE_SETTINGS"));
+
+    renderTranscriptionSetup($dialog, {
+      onSaved: () => {
+        $dialog.remove();
+        showClipboardToast(_i18n("TRANSCRIBE_SAVED"), false);
+      },
+      submitKey: "TRANSCRIBE_SAVE",
+    });
+  }
+
+  /**
+   * setTranscriptDialogSubtitle
+   * @description Show which video the transcript belongs to.
+   *
+   * @param  {jQuery}       $dialog
+   * @param  {Object|null}  source
+   * @return {void}
+   */
+  function setTranscriptDialogSubtitle($dialog, source) {
+    const parts = [_i18n("TRANSCRIPT_TITLE")];
+    if (source?.username) parts.push(`@${source.username}`);
+    if (source?.shortcode) parts.push(source.shortcode);
+    $dialog.find("#post_info").text(parts.join(" \u00b7 "));
+  }
+
+  /**
+   * createTranscriptFooterButton
+   * @param  {String}    labelKey
+   * @param  {Function}  onClick
+   * @param  {String}    variant - "", "is-primary" or "is-leading"
+   * @return {jQuery}
+   */
+  function createTranscriptFooterButton(labelKey, onClick, variant = "") {
+    return $('<button type="button"></button>')
+      .addClass(variant)
+      .attr("data-ih-locale", labelKey)
+      .text(_i18n(labelKey))
+      .on("click", function (e) {
+        consumeInjectedClick(e);
+        onClick($(this));
+      });
+  }
+
+  /**
+   * renderTranscriptDialogContent
+   * @description Replace the dialog body and footer.
+   *
+   * @param  {jQuery}  $dialog
+   * @param  {jQuery}  $content
+   * @param  {Array<jQuery>}  buttons
+   * @return {void}
+   */
+  function renderTranscriptDialogContent($dialog, $content, buttons) {
+    $dialog.find(".IG_POPUP_DIG_BODY").empty().append($content).scrollTop(0);
+    $dialog
+      .find(".insta-controls-transcript-footer")
+      .empty()
+      .append(buttons);
+  }
+
+  /**
+   * renderTranscriptionSetup
+   * @description API key and language form.
+   *
+   * @param  {jQuery}    $dialog
+   * @param  {Object}    options
+   * @param  {Function}  options.onSaved
+   * @param  {String}    options.submitKey - i18n key of the submit button
+   * @param  {String}    [options.errorKey] - i18n key of an error to show
+   * @return {void}
+   */
+  function renderTranscriptionSetup($dialog, options) {
+    const savedKey = getElevenLabsApiKey();
+    const savedLanguage = getTranscriptionLanguage();
+    const inputId = "insta-controls-elevenlabs-key";
+    const languageId = "insta-controls-elevenlabs-language";
+
+    const $form = $(`
+      <form class="insta-controls-transcript insta-controls-transcript-setup" novalidate>
+        <p class="insta-controls-transcript-setup-intro"></p>
+        <div class="insta-controls-transcript-field">
+          <label for="${inputId}"></label>
+          <div class="insta-controls-transcript-key-row">
+            <input id="${inputId}" class="insta-controls-transcript-input" type="password"
+                   autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sk_...">
+            <button type="button" class="insta-controls-transcript-key-toggle"></button>
+          </div>
+          <p class="insta-controls-transcript-note">
+            <span class="insta-controls-transcript-key-note"></span>
+            <a class="insta-controls-transcript-link" href="${ELEVENLABS_API_KEYS_URL}" target="_blank" rel="noopener noreferrer"></a>
+          </p>
+        </div>
+        <div class="insta-controls-transcript-field">
+          <label for="${languageId}"></label>
+          <select id="${languageId}"></select>
+        </div>
+        <p class="insta-controls-transcript-form-error" role="alert"></p>
+      </form>
+    `);
+
+    $form.find(".insta-controls-transcript-setup-intro").text(_i18n("TRANSCRIBE_SETUP_INTRO"));
+    $form.find(`label[for="${inputId}"]`).text(_i18n("TRANSCRIBE_API_KEY"));
+    $form.find(".insta-controls-transcript-key-note").text(`${_i18n("TRANSCRIBE_API_KEY_NOTE")} `);
+    $form.find(".insta-controls-transcript-link").text(_i18n("TRANSCRIBE_GET_KEY"));
+    $form.find(`label[for="${languageId}"]`).text(_i18n("TRANSCRIBE_LANGUAGE"));
+    $form.find(".insta-controls-transcript-key-toggle").text(_i18n("TRANSCRIBE_SHOW_KEY"));
+
+    const $input = $form.find(`#${inputId}`).val(savedKey);
+    const $language = $form.find(`#${languageId}`);
+    const $error = $form.find(".insta-controls-transcript-form-error");
+
+    $language.append(
+      $("<option>").val("").text(_i18n("TRANSCRIBE_LANGUAGE_AUTO")),
+    );
+    TRANSCRIPT_LANGUAGE_CODES.map((code) => ({
+      code,
+      name: getLanguageDisplayName(code),
+    }))
+      .sort((a, b) => a.name.localeCompare(b.name, state.lang))
+      .forEach(({ code, name }) => {
+        $language.append($("<option>").val(code).text(name));
+      });
+    $language.val(savedLanguage);
+
+    if (options.errorKey) {
+      $error.text(_i18n(options.errorKey));
+      $input.attr("aria-invalid", "true");
+    }
+
+    // Keep typing inside the form away from Instagram's keyboard shortcuts.
+    // Alt shortcuts still reach the script's own dialog hotkeys.
+    $form.on("keydown keyup keypress", function (e) {
+      if (!e.altKey) e.stopPropagation();
+    });
+
+    $form.find(".insta-controls-transcript-key-toggle").on("click", function (e) {
+      consumeInjectedClick(e);
+      const reveal = $input.attr("type") === "password";
+      $input.attr("type", reveal ? "text" : "password");
+      $(this).text(_i18n(reveal ? "TRANSCRIBE_HIDE_KEY" : "TRANSCRIBE_SHOW_KEY"));
+      $input.trigger("focus");
+    });
+
+    $input.on("input", function () {
+      $input.removeAttr("aria-invalid");
+      $error.empty();
+    });
+
+    $input.on("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        save();
+      }
+    });
+
+    function save() {
+      const apiKey = String($input.val() || "").trim();
+      if (!apiKey) {
+        $input.attr("aria-invalid", "true").trigger("focus");
+        $error.text(_i18n("TRANSCRIBE_KEY_REQUIRED"));
+        return;
+      }
+
+      GM_setValue(ELEVENLABS_API_KEY_STORAGE, apiKey);
+      GM_setValue(ELEVENLABS_LANGUAGE_STORAGE, String($language.val() || ""));
+      options.onSaved();
+    }
+
+    $form.on("submit", function (e) {
+      e.preventDefault();
+      save();
+    });
+
+    const buttons = [];
+    if (savedKey) {
+      buttons.push(
+        createTranscriptFooterButton(
+          "TRANSCRIBE_REMOVE_KEY",
+          () => {
+            GM_deleteValue(ELEVENLABS_API_KEY_STORAGE);
+            showClipboardToast(_i18n("TRANSCRIBE_KEY_REMOVED"), false);
+            $dialog.remove();
+          },
+          "is-leading",
+        ),
+      );
+    }
+    buttons.push(
+      createTranscriptFooterButton("TRANSCRIBE_CANCEL", () => $dialog.remove()),
+      createTranscriptFooterButton(options.submitKey, save, "is-primary"),
+    );
+
+    renderTranscriptDialogContent($dialog, $form, buttons);
+    $input.trigger("focus");
+  }
+
+  /**
+   * renderTranscriptionProgress
+   * @description Show the job's current step.
+   *
+   * @param  {jQuery}  $dialog
+   * @param  {String}  activeStep - "resolve", "audio" or "transcribe"
+   * @return {void}
+   */
+  function renderTranscriptionProgress($dialog, activeStep) {
+    const steps = [
+      ["resolve", "TRANSCRIBE_STEP_RESOLVE"],
+      ["audio", "TRANSCRIBE_STEP_AUDIO"],
+      ["transcribe", "TRANSCRIBE_STEP_TRANSCRIBE"],
+    ];
+    const activeIndex = steps.findIndex(([step]) => step === activeStep);
+
+    const $steps = $('<ol class="insta-controls-transcript-steps"></ol>');
+    steps.forEach(([, labelKey], index) => {
+      $("<li>")
+        .addClass("insta-controls-transcript-step")
+        .toggleClass("is-done", index < activeIndex)
+        .toggleClass("is-active", index === activeIndex)
+        .attr("data-ih-locale", labelKey)
+        .text(_i18n(labelKey))
+        .appendTo($steps);
+    });
+
+    const $content = $(
+      '<div class="insta-controls-transcript insta-controls-transcript-status" aria-live="polite"></div>',
+    )
+      .append($steps)
+      .append(
+        $('<p class="insta-controls-transcript-hint"></p>')
+          .attr("data-ih-locale", "TRANSCRIBE_PROGRESS_HINT")
+          .text(_i18n("TRANSCRIBE_PROGRESS_HINT")),
+      );
+
+    renderTranscriptDialogContent($dialog, $content, [
+      createTranscriptFooterButton("TRANSCRIBE_CANCEL", () => {
+        cancelActiveTranscription();
+        $dialog.remove();
+      }),
+    ]);
+  }
+
+  /**
+   * renderTranscriptionError
+   * @param  {jQuery}  $dialog
+   * @param  {Error}   err
+   * @param  {Object}  request
+   * @return {void}
+   */
+  function renderTranscriptionError($dialog, err, request) {
+    let detail = _i18n(err?.messageKey || "TRANSCRIBE_ERROR_UNKNOWN");
+    if (!detail) detail = _i18n("TRANSCRIBE_ERROR_UNKNOWN");
+    detail = detail.replace("%STATUS%", err?.status ?? "");
+    if (err?.detail) detail += ` ${err.detail}`;
+
+    const $content = $(
+      '<div class="insta-controls-transcript insta-controls-transcript-status" role="alert"></div>',
+    )
+      .append(
+        $('<p class="insta-controls-transcript-error-title"></p>').text(
+          _i18n("TRANSCRIBE_FAILED"),
+        ),
+      )
+      .append(
+        $('<p class="insta-controls-transcript-error-detail"></p>').text(
+          detail,
+        ),
+      );
+
+    renderTranscriptDialogContent($dialog, $content, [
+      createTranscriptFooterButton(
+        "TRANSCRIBE_SETTINGS",
+        () =>
+          renderTranscriptionSetup($dialog, {
+            onSaved: () => runTranscription($dialog, request),
+            submitKey: "TRANSCRIBE_SAVE_AND_RUN",
+          }),
+        "is-leading",
+      ),
+      createTranscriptFooterButton("CLOSE", () => $dialog.remove()),
+      createTranscriptFooterButton(
+        "TRANSCRIBE_RETRY",
+        () => runTranscription($dialog, request),
+        "is-primary",
+      ),
+    ]);
+  }
+
+  /**
+   * copyTranscriptText
+   * @param  {String}  text
+   * @return {Promise<void>}
+   */
+  async function copyTranscriptText(text) {
+    if (window.isSecureContext && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+
+    const $textarea = $("<textarea readonly></textarea>")
+      .val(text)
+      .css({ position: "fixed", top: "-1000px", opacity: 0 })
+      .appendTo("body");
+    try {
+      $textarea.get(0).select();
+      if (!document.execCommand("copy")) {
+        throw new Error("Copy command was rejected.");
+      }
+    } finally {
+      $textarea.remove();
+    }
+  }
+
+  /**
+   * renderTranscriptionResult
+   * @param  {jQuery}  $dialog
+   * @param  {Object}  transcript
+   * @param  {Object}  source
+   * @param  {Object}  request
+   * @return {void}
+   */
+  function renderTranscriptionResult($dialog, transcript, source, request) {
+    const segments = buildTranscriptSegments(
+      transcript,
+      TRANSCRIPT_DISPLAY_SEGMENT,
+    );
+    const speakers = getTranscriptSpeakerLabels(segments);
+    const wordCount = (transcript.words || []).filter(
+      (word) => word?.type === "word",
+    ).length;
+    const duration =
+      Number(transcript.audio_duration_secs) || segments.at(-1)?.end || 0;
+    const fileBaseName = `${getTranscriptFileBaseName(source)}-transcript`;
+
+    const $content = $('<div class="insta-controls-transcript"></div>');
+    const $meta = $('<div class="insta-controls-transcript-meta"></div>');
+    const addChip = (text, titleKey) => {
+      $('<span class="insta-controls-transcript-chip"></span>')
+        .text(text)
+        .attr("title", titleKey ? _i18n(titleKey) : null)
+        .appendTo($meta);
+    };
+
+    if (transcript.language_code) {
+      const probability = Number(transcript.language_probability);
+      const confidence = Number.isFinite(probability)
+        ? ` \u00b7 ${Math.round(probability * 100)}%`
+        : "";
+      addChip(
+        `${getLanguageDisplayName(transcript.language_code)}${confidence}`,
+        "TRANSCRIBE_DETECTED_LANGUAGE",
+      );
+    }
+    if (duration > 0) {
+      addChip(formatTranscriptTime(duration), "TRANSCRIBE_DURATION");
+    }
+    addChip(
+      _i18n(
+        wordCount === 1
+          ? "TRANSCRIBE_WORD_COUNT_SINGULAR"
+          : "TRANSCRIBE_WORD_COUNT_PLURAL",
+      ).replace("%COUNT%", wordCount.toLocaleString(state.lang)),
+    );
+    $content.append($meta);
+
+    if (segments.length === 0) {
+      $content.append(
+        $('<p class="insta-controls-transcript-empty"></p>').text(
+          _i18n("TRANSCRIBE_NO_SPEECH"),
+        ),
+      );
+    } else {
+      const $list = $('<ol class="insta-controls-transcript-segments"></ol>');
+      let previousSpeaker = null;
+
+      segments.forEach((segment) => {
+        const $item = $('<li class="insta-controls-transcript-segment"></li>');
+        const $body = $("<div></div>");
+        const speakerLabel = speakers.get(segment.speaker);
+
+        $("<time>")
+          .addClass("insta-controls-transcript-time")
+          .attr("datetime", `PT${Math.floor(segment.start)}S`)
+          .text(formatTranscriptTime(segment.start))
+          .appendTo($item);
+
+        if (speakerLabel && segment.speaker !== previousSpeaker) {
+          $('<span class="insta-controls-transcript-speaker"></span>')
+            .text(speakerLabel)
+            .appendTo($body);
+        }
+        previousSpeaker = segment.speaker;
+
+        $('<p class="insta-controls-transcript-text"></p>')
+          .text(segment.text)
+          .appendTo($body);
+        $item.append($body).appendTo($list);
+      });
+
+      $content.append($list);
+    }
+
+    const saveText = async function (text, extension, mimeType) {
+      try {
+        await triggerDownload(
+          new Blob([text], { type: `${mimeType};charset=utf-8` }),
+          `${fileBaseName}.${extension}`,
+        );
+      } catch (err) {
+        console.error("Failed to download the transcript:", err);
+        showClipboardToast(_i18n("TRANSCRIBE_DOWNLOAD_ERROR"), true);
+      }
+    };
+
+    const buttons = [
+      createTranscriptFooterButton(
+        "TRANSCRIBE_SETTINGS",
+        () =>
+          renderTranscriptionSetup($dialog, {
+            onSaved: () => runTranscription($dialog, request),
+            submitKey: "TRANSCRIBE_SAVE_AND_RUN",
+          }),
+        "is-leading",
+      ),
+    ];
+
+    if (segments.length > 0) {
+      buttons.push(
+        createTranscriptFooterButton("TRANSCRIBE_COPY", () => {
+          copyTranscriptText(buildTranscriptPlainText(transcript))
+            .then(() => showClipboardToast(_i18n("TRANSCRIBE_COPIED"), false))
+            .catch((err) => {
+              console.error("Failed to copy the transcript:", err);
+              showClipboardToast(_i18n("TRANSCRIBE_COPY_ERROR"), true);
+            });
+        }),
+        createTranscriptFooterButton("TRANSCRIBE_DOWNLOAD_TXT", () =>
+          saveText(buildTranscriptPlainText(transcript), "txt", "text/plain"),
+        ),
+        createTranscriptFooterButton(
+          "TRANSCRIBE_DOWNLOAD_SRT",
+          () =>
+            saveText(
+              buildTranscriptSubtitles(transcript),
+              "srt",
+              "application/x-subrip",
+            ),
+          "is-primary",
+        ),
+      );
+    } else {
+      buttons.push(
+        createTranscriptFooterButton("CLOSE", () => $dialog.remove()),
+      );
+    }
+
+    renderTranscriptDialogContent($dialog, $content, buttons);
+  }
+
+  /**
+   * runTranscription
+   * @description Resolve the video, download its audio, transcribe it with
+   *              ElevenLabs, and render the transcript in the dialog.
+   *
+   * @param  {jQuery}  $dialog
+   * @param  {Object}  request
+   * @return {Promise<void>}
+   */
+  async function runTranscription($dialog, request) {
+    cancelActiveTranscription();
+
+    const job = {
+      $dialog,
+      abortRequest: null,
+      cancelled: false,
+      dialogObserver: null,
+    };
+    state.GL_transcription.activeJob = job;
+
+    // Any path that closes the dialog also cancels the upload.
+    job.dialogObserver = new MutationObserver(() => {
+      if (!$dialog.get(0)?.isConnected) cancelActiveTranscription();
+    });
+    job.dialogObserver.observe(document.body, { childList: true });
+
+    renderTranscriptionProgress($dialog, "resolve");
+
+    try {
+      let source;
+      try {
+        source = await request.resolveSource();
+      } catch (err) {
+        if (err?.messageKey) throw err;
+        throw createTranscriptionError("TRANSCRIBE_ERROR_NO_SOURCE", {
+          cause: err,
+        });
+      }
+      assertTranscriptionJob(job);
+      setTranscriptDialogSubtitle($dialog, source);
+
+      const options = getTranscriptionOptions();
+      if (!options.apiKey) {
+        throw createTranscriptionError("TRANSCRIBE_ERROR_INVALID_KEY");
+      }
+
+      const cacheKey = [
+        source.mediaId || source.url,
+        options.languageCode || "auto",
+        options.diarize,
+        options.tagAudioEvents,
+      ].join("|");
+      let transcript = state.GL_transcription.cache.get(cacheKey);
+
+      if (!transcript) {
+        renderTranscriptionProgress($dialog, "audio");
+        const audio = await fetchTranscriptionAudio(source);
+        assertTranscriptionJob(job);
+
+        renderTranscriptionProgress($dialog, "transcribe");
+        transcript = await requestElevenLabsTranscription(
+          audio.blob,
+          audio.filename,
+          options,
+          job,
+        );
+        assertTranscriptionJob(job);
+        cacheTranscript(cacheKey, transcript);
+      }
+
+      renderTranscriptionResult($dialog, transcript, source, request);
+    } catch (err) {
+      if (
+        err?.messageKey === "TRANSCRIBE_CANCELLED" ||
+        job.cancelled ||
+        !$dialog.get(0)?.isConnected
+      ) {
+        return;
+      }
+
+      console.error("[transcription]", err);
+
+      if (err?.messageKey === "TRANSCRIBE_ERROR_INVALID_KEY") {
+        renderTranscriptionSetup($dialog, {
+          onSaved: () => runTranscription($dialog, request),
+          submitKey: "TRANSCRIBE_SAVE_AND_RUN",
+          errorKey: getElevenLabsApiKey()
+            ? "TRANSCRIBE_ERROR_INVALID_KEY"
+            : "TRANSCRIBE_KEY_REQUIRED",
+        });
+      } else {
+        renderTranscriptionError($dialog, err, request);
+      }
+    } finally {
+      if (state.GL_transcription.activeJob === job) {
+        job.dialogObserver.disconnect();
+        state.GL_transcription.activeJob = null;
       }
     }
   }
@@ -11795,7 +13378,7 @@
 
     $(".button_wrapper").remove();
     $(
-      ".IG_DWPROFILE, .IG_DWPROFILE, .IG_DWSTORY, .IG_DWSTORY_ALL, .IG_DWSTORY_THUMBNAIL, .IG_DWSTORY_POSITION, .IG_DWNEWTAB, .IG_DWHISTORY, .IG_DWHISTORY_ALL, .IG_DWHINEWTAB, .IG_DWHISTORY_THUMBNAIL, .IG_DWHISTORY_POSITION, .IG_REELS, .IG_REELS_NEWTAB, .IG_REELS_THUMBNAIL",
+      ".IG_DWPROFILE, .IG_DWPROFILE, .IG_DWSTORY, .IG_DWSTORY_ALL, .IG_DWSTORY_THUMBNAIL, .IG_DWSTORY_POSITION, .IG_DWNEWTAB, .IG_DWHISTORY, .IG_DWHISTORY_ALL, .IG_DWHINEWTAB, .IG_DWHISTORY_THUMBNAIL, .IG_DWHISTORY_POSITION, .IG_REELS, .IG_REELS_NEWTAB, .IG_REELS_THUMBNAIL, .IG_REELS_TRANSCRIBE",
     ).remove();
     $("[data-snig]").removeAttr("data-snig");
 
@@ -12130,6 +13713,18 @@
 
     state.registerMenuIds.push(
       GM_registerMenuCommand(
+        _i18n("TRANSCRIBE_SETTINGS"),
+        () => {
+          showTranscriptionSetting();
+        },
+        {
+          accessKey: "t",
+        },
+      ),
+    );
+
+    state.registerMenuIds.push(
+      GM_registerMenuCommand(
         _i18n("DEBUG"),
         () => {
           showDebugDOM();
@@ -12393,6 +13988,16 @@
                 )
                 .append(`<div class="IG_POPUP_DIG_BTN">${SVG.CLOSE}</div>`);
             }
+          });
+      }
+
+      if (name === "TRANSCRIBE_VIDEO") {
+        $body
+          .find(`input[id="${name}"]`)
+          .parent("label")
+          .on("contextmenu", function (e) {
+            e.preventDefault();
+            showTranscriptionSetting();
           });
       }
 
@@ -12999,6 +14604,72 @@
         HOTKEY_CONFLICT_WARNING:
           "This hotkey may conflict with other settings.",
         HOTKEY_RESET: "Reset",
+        TRANSCRIBE: "Transcribe Video",
+        TRANSCRIBE_VIDEO:
+          "Show the ElevenLabs Transcribe Button on Videos (Right-Click to Set Up)",
+        TRANSCRIBE_VIDEO_INTRO:
+          "Add a button to post and Reel videos that transcribes their speech with ElevenLabs Speech to Text.\n\nRequires your own ElevenLabs API key; usage counts toward your ElevenLabs plan. Right-click this setting, or use the script menu, to enter the key and the spoken language.",
+        TRANSCRIBE_SPEAKERS: "Label Speakers in Transcripts",
+        TRANSCRIBE_SPEAKERS_INTRO:
+          "Ask ElevenLabs to tell speakers apart and label each speaker's lines in the transcript and subtitles.",
+        TRANSCRIBE_AUDIO_EVENTS: "Include Sounds Such as Laughter in Transcripts",
+        TRANSCRIBE_AUDIO_EVENTS_INTRO:
+          "Ask ElevenLabs to mark non-speech sounds, such as (laughter) or (applause), in the transcript.",
+        TRANSCRIBE_SETTINGS: "ElevenLabs Transcription",
+        TRANSCRIPT_TITLE: "Transcript",
+        TRANSCRIBE_STEP_RESOLVE: "Finding the video",
+        TRANSCRIBE_STEP_AUDIO: "Downloading the audio",
+        TRANSCRIBE_STEP_TRANSCRIBE: "Transcribing with ElevenLabs",
+        TRANSCRIBE_PROGRESS_HINT:
+          "Longer videos can take a minute. Closing this window cancels the transcription.",
+        TRANSCRIBE_CANCEL: "Cancel",
+        TRANSCRIBE_SETUP_INTRO:
+          "ElevenLabs creates the transcript using your API key. Usage counts toward your ElevenLabs plan.",
+        TRANSCRIBE_API_KEY: "API key",
+        TRANSCRIBE_API_KEY_NOTE:
+          "Stored by your userscript manager and sent only to api.elevenlabs.io.",
+        TRANSCRIBE_GET_KEY: "Create a key",
+        TRANSCRIBE_SHOW_KEY: "Show",
+        TRANSCRIBE_HIDE_KEY: "Hide",
+        TRANSCRIBE_LANGUAGE: "Spoken language",
+        TRANSCRIBE_LANGUAGE_AUTO: "Detect automatically",
+        TRANSCRIBE_SAVE: "Save",
+        TRANSCRIBE_SAVE_AND_RUN: "Save and transcribe",
+        TRANSCRIBE_REMOVE_KEY: "Remove key",
+        TRANSCRIBE_KEY_REQUIRED: "Enter your ElevenLabs API key.",
+        TRANSCRIBE_SAVED: "Transcription settings saved.",
+        TRANSCRIBE_KEY_REMOVED: "ElevenLabs API key removed.",
+        TRANSCRIBE_COPY: "Copy text",
+        TRANSCRIBE_COPIED: "Transcript copied to the clipboard.",
+        TRANSCRIBE_COPY_ERROR: "Could not copy the transcript.",
+        TRANSCRIBE_DOWNLOAD_TXT: "Download .txt",
+        TRANSCRIBE_DOWNLOAD_SRT: "Download .srt",
+        TRANSCRIBE_DOWNLOAD_ERROR: "Could not download the transcript.",
+        TRANSCRIBE_NO_SPEECH: "No speech was detected in this video.",
+        TRANSCRIBE_WORD_COUNT_SINGULAR: "%COUNT% word",
+        TRANSCRIBE_WORD_COUNT_PLURAL: "%COUNT% words",
+        TRANSCRIBE_DETECTED_LANGUAGE: "Detected language and confidence",
+        TRANSCRIBE_DURATION: "Audio length",
+        TRANSCRIBE_SPEAKER: "Speaker %NUMBER%",
+        TRANSCRIBE_FAILED: "Transcription failed",
+        TRANSCRIBE_RETRY: "Try again",
+        TRANSCRIBE_ERROR_NOT_VIDEO: "The visible item is not a video.",
+        TRANSCRIBE_ERROR_NO_SOURCE:
+          "Instagram did not provide a file for this video. Let it finish loading, then try again.",
+        TRANSCRIBE_ERROR_AUDIO:
+          "Could not download this video from Instagram. Check your connection, then try again.",
+        TRANSCRIBE_ERROR_INVALID_KEY:
+          "ElevenLabs rejected the API key. Enter a valid key to continue.",
+        TRANSCRIBE_ERROR_RATE_LIMIT:
+          "ElevenLabs is limiting requests right now. Wait a moment, then try again.",
+        TRANSCRIBE_ERROR_NETWORK:
+          "Could not reach ElevenLabs. Check your connection and allow api.elevenlabs.io in your userscript manager.",
+        TRANSCRIBE_ERROR_TIMEOUT:
+          "ElevenLabs did not finish in time. Try again, or try a shorter video.",
+        TRANSCRIBE_ERROR_API: "ElevenLabs returned an error (HTTP %STATUS%).",
+        TRANSCRIBE_ERROR_RESPONSE:
+          "ElevenLabs returned a response that could not be read.",
+        TRANSCRIBE_ERROR_UNKNOWN: "Something went wrong while transcribing this video.",
       },
       "pt-BR": {
         CONTINUE_FEED_VIDEO_PLAYBACK:
@@ -13014,6 +14685,72 @@
           "Não foi possível copiar esta mídia para a área de transferência.",
         COPY_MEDIA_UNSUPPORTED:
           "Este navegador não oferece suporte à cópia de mídia para a área de transferência.",
+        TRANSCRIBE: "Transcrever vídeo",
+        TRANSCRIBE_VIDEO:
+          "Mostrar o botão de transcrição do ElevenLabs nos vídeos (clique com o botão direito para configurar)",
+        TRANSCRIBE_VIDEO_INTRO:
+          "Adiciona aos vídeos de publicações e Reels um botão que transcreve a fala com o Speech to Text do ElevenLabs.\n\nRequer sua própria chave de API do ElevenLabs; o uso é descontado do seu plano do ElevenLabs. Clique com o botão direito nesta opção, ou use o menu do script, para informar a chave e o idioma falado.",
+        TRANSCRIBE_SPEAKERS: "Identificar quem fala nas transcrições",
+        TRANSCRIBE_SPEAKERS_INTRO:
+          "Pede ao ElevenLabs para distinguir as vozes e identificar as falas de cada pessoa na transcrição e nas legendas.",
+        TRANSCRIBE_AUDIO_EVENTS: "Incluir sons como risadas nas transcrições",
+        TRANSCRIBE_AUDIO_EVENTS_INTRO:
+          "Pede ao ElevenLabs para marcar sons que não são fala, como (risadas) ou (aplausos), na transcrição.",
+        TRANSCRIBE_SETTINGS: "Transcrição com ElevenLabs",
+        TRANSCRIPT_TITLE: "Transcrição",
+        TRANSCRIBE_STEP_RESOLVE: "Localizando o vídeo",
+        TRANSCRIBE_STEP_AUDIO: "Baixando o áudio",
+        TRANSCRIBE_STEP_TRANSCRIBE: "Transcrevendo com o ElevenLabs",
+        TRANSCRIBE_PROGRESS_HINT:
+          "Vídeos mais longos podem levar um minuto. Fechar esta janela cancela a transcrição.",
+        TRANSCRIBE_CANCEL: "Cancelar",
+        TRANSCRIBE_SETUP_INTRO:
+          "O ElevenLabs cria a transcrição usando sua chave de API. O uso é descontado do seu plano do ElevenLabs.",
+        TRANSCRIBE_API_KEY: "Chave de API",
+        TRANSCRIBE_API_KEY_NOTE:
+          "Armazenada pelo gerenciador de userscripts e enviada apenas para api.elevenlabs.io.",
+        TRANSCRIBE_GET_KEY: "Criar uma chave",
+        TRANSCRIBE_SHOW_KEY: "Mostrar",
+        TRANSCRIBE_HIDE_KEY: "Ocultar",
+        TRANSCRIBE_LANGUAGE: "Idioma falado",
+        TRANSCRIBE_LANGUAGE_AUTO: "Detectar automaticamente",
+        TRANSCRIBE_SAVE: "Salvar",
+        TRANSCRIBE_SAVE_AND_RUN: "Salvar e transcrever",
+        TRANSCRIBE_REMOVE_KEY: "Remover chave",
+        TRANSCRIBE_KEY_REQUIRED: "Informe sua chave de API do ElevenLabs.",
+        TRANSCRIBE_SAVED: "Configurações de transcrição salvas.",
+        TRANSCRIBE_KEY_REMOVED: "Chave de API do ElevenLabs removida.",
+        TRANSCRIBE_COPY: "Copiar texto",
+        TRANSCRIBE_COPIED: "Transcrição copiada para a área de transferência.",
+        TRANSCRIBE_COPY_ERROR: "Não foi possível copiar a transcrição.",
+        TRANSCRIBE_DOWNLOAD_TXT: "Baixar .txt",
+        TRANSCRIBE_DOWNLOAD_SRT: "Baixar .srt",
+        TRANSCRIBE_DOWNLOAD_ERROR: "Não foi possível baixar a transcrição.",
+        TRANSCRIBE_NO_SPEECH: "Nenhuma fala foi detectada neste vídeo.",
+        TRANSCRIBE_WORD_COUNT_SINGULAR: "%COUNT% palavra",
+        TRANSCRIBE_WORD_COUNT_PLURAL: "%COUNT% palavras",
+        TRANSCRIBE_DETECTED_LANGUAGE: "Idioma detectado e confiança",
+        TRANSCRIBE_DURATION: "Duração do áudio",
+        TRANSCRIBE_SPEAKER: "Pessoa %NUMBER%",
+        TRANSCRIBE_FAILED: "Falha na transcrição",
+        TRANSCRIBE_RETRY: "Tentar novamente",
+        TRANSCRIBE_ERROR_NOT_VIDEO: "O item visível não é um vídeo.",
+        TRANSCRIBE_ERROR_NO_SOURCE:
+          "O Instagram não forneceu um arquivo para este vídeo. Aguarde o carregamento e tente novamente.",
+        TRANSCRIBE_ERROR_AUDIO:
+          "Não foi possível baixar este vídeo do Instagram. Verifique sua conexão e tente novamente.",
+        TRANSCRIBE_ERROR_INVALID_KEY:
+          "O ElevenLabs recusou a chave de API. Informe uma chave válida para continuar.",
+        TRANSCRIBE_ERROR_RATE_LIMIT:
+          "O ElevenLabs está limitando as solicitações no momento. Aguarde um pouco e tente novamente.",
+        TRANSCRIBE_ERROR_NETWORK:
+          "Não foi possível acessar o ElevenLabs. Verifique sua conexão e permita api.elevenlabs.io no gerenciador de userscripts.",
+        TRANSCRIBE_ERROR_TIMEOUT:
+          "O ElevenLabs não terminou a tempo. Tente novamente ou use um vídeo mais curto.",
+        TRANSCRIBE_ERROR_API: "O ElevenLabs retornou um erro (HTTP %STATUS%).",
+        TRANSCRIBE_ERROR_RESPONSE:
+          "O ElevenLabs retornou uma resposta que não pôde ser lida.",
+        TRANSCRIBE_ERROR_UNKNOWN: "Algo deu errado ao transcrever este vídeo.",
       },
     };
 
@@ -13291,6 +15028,10 @@
         GM_setValue(name, isChecked);
         USER_SETTING[name] = isChecked;
 
+        if (name === "TRANSCRIBE_VIDEO" && !isChecked) {
+          $(".IG_TRANSCRIBE_MAIN, .IG_REELS_TRANSCRIBE").remove();
+        }
+
         if (name === "MAX_REEL_PLAYBACK_QUALITY") {
           if (isChecked) {
             scanForPlayingReels();
@@ -13511,6 +15252,14 @@
     // Running if user left-click download icon in reels
     $("body").on("click", ".IG_REELS_THUMBNAIL", function () {
       onReels(true, false);
+    });
+
+    // Running if user left-click transcribe icon in reels
+    $("body").on("click", ".IG_REELS_TRANSCRIBE", function () {
+      const shortcode = getCurrentReelsShortcode();
+      openTranscriptionDialog({
+        resolveSource: () => resolveReelVideoSource(shortcode),
+      });
     });
 
     // Running if user right-click profile picture in stories area
